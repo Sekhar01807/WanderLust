@@ -5,7 +5,8 @@ const passportLocalMongoose = require('passport-local-mongoose').default;
 const userSchema = new Schema({
     email: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     country: {
         type: String,
@@ -41,9 +42,14 @@ const userSchema = new Schema({
         type: String,
         default: "English"
     },
+    isVerified: {
+        type: Boolean,
+        default: true
+    },
     resetPasswordToken: String,
     resetPasswordExpires: Date
 });
+
 
 userSchema.plugin(passportLocalMongoose);
 

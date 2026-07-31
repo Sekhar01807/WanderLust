@@ -1,33 +1,101 @@
 <% layout("/layouts/boilerplate") %>
 
-<div class="row mt-5 mb-5">
-    <div class="col-12 col-md-6 offset-md-3">
+<div class="row justify-content-center align-items-center my-5">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-5">
         <%- include("../includes/flash.ejs") %>
-        <div class="card shadow border-0 rounded-4">
+        <div class="card auth-card shadow-lg border-0 overflow-hidden">
             <div class="card-body p-4 p-md-5">
-                <h2 class="mb-4 fw-bold text-center" style="color: #ff385c;"><i class="fa-solid fa-user-plus me-2"></i>Join WanderLust</h2>
+                <div class="text-center mb-4">
+                    <div class="auth-header-icon shadow-sm">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <h2 class="fw-bold mb-1">Create Account</h2>
+                    <p class="text-muted small mb-0">Join WanderLust to explore & book places</p>
+                </div>
+
                 <form action="/signup" method="POST" id="signupForm" novalidate>
-    <div class="mb-3">  
-        <label for="username" class="form-label"> Username</label>
-        <input type="text" name="username" id="username" class="form-control" required> 
-        <div class="invalid-feedback"> Username Required ! </div>
-    </div>
-     <div class="mb-3">  
-        <label for="email" class="form-label">Email</label>
-        <input type="email" name="email" id="email" class="form-control" required>
-        <div class="invalid-feedback"> Enter Valid email </div> 
-    </div>
-     <div class="mb-3">  
-        <label for="password" class="form-label"> Password </label>
-        <input type="password" name="password" id="password" class="form-control" required>
-        <div class="invalid-feedback"> Password Required ! </div> 
-    </div>
-                    <button class="btn btn-danger w-100 py-2 fs-5 fw-bold rounded-3 mt-3" style="background-color: #ff385c; border: none; transition: 0.2s;">
-                        Sign Up
+                    <!-- Username -->
+                    <div class="mb-3">
+                        <label for="username" class="form-label fw-bold small text-muted">USERNAME</label>
+                        <div class="input-group auth-input-group border">
+                            <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                            <input type="text" name="username" id="username" class="form-control" placeholder="Choose a unique username" required autocomplete="username">
+                        </div>
+                        <div class="invalid-feedback ms-1 mt-1 small">Username is required</div>
+                    </div>
+
+                    <!-- Account Type (Traveler vs Host) -->
+                    <div class="mb-3">
+                        <label for="role" class="form-label fw-bold small text-muted">I AM JOINING AS A</label>
+                        <div class="input-group auth-input-group border">
+                            <span class="input-group-text"><i class="fa-solid fa-user-gear"></i></span>
+                            <select name="role" id="role" class="form-select border-0" required>
+                                <option value="Traveler" selected>🧳 Traveler (Explore & Book Stays)</option>
+                                <option value="Host">🏡 Host (List & Manage Properties)</option>
+                            </select>
+                        </div>
+                    </div>
+
+
+                    <!-- Email -->
+                    <div class="mb-3">
+                        <label for="email" class="form-label fw-bold small text-muted">EMAIL ADDRESS</label>
+                        <div class="input-group auth-input-group border">
+                            <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                            <input type="email" name="email" id="email" class="form-control" placeholder="name@example.com" required autocomplete="email">
+                        </div>
+                        <div class="invalid-feedback ms-1 mt-1 small">Enter a valid email address</div>
+                    </div>
+
+                    <!-- Mobile Number with Mandatory Country Code -->
+                    <div class="mb-3">
+                        <label for="phoneNumber" class="form-label fw-bold small text-muted">MOBILE NUMBER (WITH MANDATORY COUNTRY CODE)</label>
+                        <div class="input-group auth-input-group border">
+                            <select name="countryCode" id="countryCode" class="form-select border-0 bg-light fw-semibold" style="max-width: 115px;" required>
+                                <option value="+91" selected>🇮🇳 +91</option>
+                                <option value="+1">🇺🇸 +1</option>
+                                <option value="+44">🇬🇧 +44</option>
+                                <option value="+61">🇦🇺 +61</option>
+                                <option value="+81">🇯🇵 +81</option>
+                                <option value="+49">🇩🇪 +49</option>
+                                <option value="+33">🇫🇷 +33</option>
+                                <option value="+971">🇦🇪 +971</option>
+                                <option value="+86">🇨🇳 +86</option>
+                                <option value="+7">🇷🇺 +7</option>
+                            </select>
+                            <span class="input-group-text border-0 bg-transparent"><i class="fa-solid fa-mobile-screen-button text-muted"></i></span>
+                            <input type="tel" name="phoneNumber" id="phoneNumber" class="form-control border-0" placeholder="98765 43210" required autocomplete="tel">
+                        </div>
+                        <div class="invalid-feedback ms-1 mt-1 small">Mandatory country code & mobile number required</div>
+                    </div>
+
+
+
+
+                    <!-- Password -->
+                    <div class="mb-4">
+                        <label for="password" class="form-label fw-bold small text-muted">PASSWORD</label>
+                        <div class="input-group auth-input-group border">
+                            <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                            <input type="password" name="password" id="password" class="form-control" placeholder="Create a strong password" required autocomplete="new-password">
+                            <button type="button" class="btn input-group-text toggle-password-btn" id="togglePasswordBtn" title="Toggle password visibility">
+                                <i class="fa-solid fa-eye" id="togglePasswordIcon"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback ms-1 mt-1 small">Password is required</div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn auth-btn-submit w-100 fs-5 mb-3">
+                        <i class="fa-solid fa-user-check me-2"></i>Sign Up
                     </button>
                 </form>
-                <hr class="my-4">
-                <p class="text-center mb-0">Already have an account? <a href="/login" class="fw-bold" style="color: #ff385c; text-decoration: none;">Sign In</a></p>
+
+                <hr class="my-4 opacity-25">
+                <p class="text-center mb-0 text-muted">
+                    Already have an account? 
+                    <a href="/login" class="fw-bold text-decoration-none ms-1" style="color: #ff385c;">Log In</a>
+                </p>
             </div>
         </div>
     </div>
@@ -35,32 +103,53 @@
 
 <script>
 (() => {
-  const form = document.getElementById('signupForm');
-  const inputs = form.querySelectorAll('input[required]');
+    // Password visibility toggle
+    const toggleBtn = document.getElementById('togglePasswordBtn');
+    const passwordInput = document.getElementById('password');
+    const toggleIcon = document.getElementById('togglePasswordIcon');
 
-  inputs.forEach(input => {
-    input.addEventListener('input', () => {
-      if (input.value.trim() === '') {
-        input.classList.add('is-invalid');
-      } else {
-        input.classList.remove('is-invalid');
-        input.classList.remove('is-valid');
-      }
-    });
-  });
-
-  form.addEventListener('submit', (e) => {
-    let hasError = false;
-    inputs.forEach(input => {
-      if (!input.value.trim()) {
-        input.classList.add('is-invalid');
-        hasError = true;
-      }
-    });
-    if (hasError) {
-      e.preventDefault();
-      e.stopPropagation();
+    if (toggleBtn && passwordInput && toggleIcon) {
+        toggleBtn.addEventListener('click', () => {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            toggleIcon.className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        });
     }
-  });
+
+    // Custom Validation
+    const form = document.getElementById('signupForm');
+    if (form) {
+        const inputs = form.querySelectorAll('input[required]');
+
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                const group = input.closest('.auth-input-group');
+                if (input.value.trim() === '') {
+                    input.classList.add('is-invalid');
+                    if (group) group.classList.add('border-danger');
+                } else {
+                    input.classList.remove('is-invalid');
+                    input.classList.remove('is-valid');
+                    if (group) group.classList.remove('border-danger');
+                }
+            });
+        });
+
+        form.addEventListener('submit', (e) => {
+            let hasError = false;
+            inputs.forEach(input => {
+                const group = input.closest('.auth-input-group');
+                if (!input.value.trim()) {
+                    input.classList.add('is-invalid');
+                    if (group) group.classList.add('border-danger');
+                    hasError = true;
+                }
+            });
+            if (hasError) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+    }
 })();
 </script>

@@ -9,18 +9,52 @@ module.exports.renderSignup = (req, res) => {
     res.render("users/signup.ejs");
 };
 
-module.exports.signup = async (req, res) => {
+module.exports.signup = async (req, res, next) => {
     try {
-        let { username, email, password } = req.body;
-        const newUser = new User({ email, username });
+        let { username, email, password, countryCode, phoneNumber, role } = req.body;
+        
+        email = email ? email.trim().toLowerCase() : "";
+        phoneNumber = phoneNumber ? phoneNumber.trim() : "";
+        countryCode = countryCode ? countryCode.trim() : "+91";
+        role = (role === "Host") ? "Host" : "Traveler";
+
+        if (!email) {
+            req.flash("error", "Please enter a valid email address.");
+            return res.redirect("/signup");
+        }
+
+        if (!phoneNumber) {
+            req.flash("error", "Please enter your mobile number.");
+            return res.redirect("/signup");
+        }
+
+        const fullPhoneNumber = `${countryCode} ${phoneNumber}`;
+
+        // Check if an account with this email address already exists
+        const existingEmail = await User.findOne({ email: { $regex: new RegExp(`^${email.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } });
+        if (existingEmail) {
+            req.flash("error", `An account with the email "${email}" already exists. Please log in instead.`);
+            return res.redirect("/signup");
+        }
+
+        // Check if an account with this mobile number already exists (No repeats!)
+        const existingPhone = await User.findOne({ $or: [{ phoneNumber: fullPhoneNumber }, { phoneNumber: phoneNumber }] });
+        if (existingPhone) {
+            req.flash("error", `An account with the mobile number "${fullPhoneNumber}" is already registered. Please log in instead.`);
+            return res.redirect("/signup");
+        }
+
+        const newUser = new User({ email, username, phoneNumber: fullPhoneNumber, role, isVerified: true });
         const registeredUser = await User.register(newUser, password);
+
+
         req.login(registeredUser, async (err) => {
             if (err) {
                 return next(err);
             }
             await sendWelcomeEmail(registeredUser);
-            req.flash("success", "Welcome to WanderLust! Your account has been created.");
-            let redirectUrl = req.session.redirectUrl || "/listings";
+            req.flash("success", `Welcome to WanderLust, ${registeredUser.username}! 🎉 Your account and phone number have been verified.`);
+            let redirectUrl = req.session.redirectUrl || "/profile";
             delete req.session.redirectUrl;
             res.redirect(redirectUrl);
         });
@@ -30,15 +64,18 @@ module.exports.signup = async (req, res) => {
     }
 };
 
+
 module.exports.renderLogin = (req, res) => {
     res.render("users/login.ejs");
 };
 
 module.exports.login = async (req, res) => {
-    req.flash("success", "Welcome back to WanderLust! 🌍");
+    req.flash("success", `Welcome back to WanderLust, ${req.user.username}! 🌍`);
     let redirectUrl = res.locals.redirectUrl || "/listings";
+    delete req.session.redirectUrl;
     res.redirect(redirectUrl);
 };
+
 
 module.exports.logout = (req, res, next) => {
     req.logout((err) => {
@@ -84,8 +121,50 @@ module.exports.showProfile = async (req, res) => {
     const user = await User.findById(req.user._id).populate("wishlist");
     const userListings = await Listing.find({ owner: req.user._id });
     
+    // Automatically set role to Host if user owns any listings
+    if (userListings.length > 0 && user.role !== 'Host') {
+        user.role = 'Host';
+        await user.save();
+    }
+
+    
     const Booking = require("../models/booking");
-    const userBookings = await Booking.find({ user: req.user._id }).populate("listing").sort({ checkIn: 1 });
+    const userBookings = await Booking.find({ user: req.user._id }).populate("listing").sort({ createdAt: -1 });
+
+
+    // Fetch ALL incoming reservations & audit logs for stays owned by this Host
+    const hostListingIds = userListings.map(l => l._id);
+    const hostReservations = await Booking.find({
+        listing: { $in: hostListingIds }
+    }).populate("user listing").sort({ createdAt: -1 });
+
+
+    // Compute Host Analytics & Reservation Audit Logs
+    let hostTotalEarnings = 0;
+    let hostActiveBookings = 0;
+    let hostCancelledBookings = 0;
+    let hostCompletedStays = 0;
+
+    hostReservations.forEach(b => {
+        if (b.paymentStatus === 'paid') {
+            hostTotalEarnings += (b.totalPrice || 0);
+            if (new Date() > new Date(b.checkOut)) {
+                hostCompletedStays++;
+            } else {
+                hostActiveBookings++;
+            }
+        } else if (b.paymentStatus === 'cancelled') {
+            hostCancelledBookings++;
+        }
+    });
+
+    const hostStats = {
+        totalEarnings: hostTotalEarnings,
+        activeBookings: hostActiveBookings,
+        completedStays: hostCompletedStays,
+        cancelledBookings: hostCancelledBookings,
+        totalReservations: hostReservations.length
+    };
 
     const userReviews = await Review.find({ author: req.user._id }).sort({ createdAt: -1 });
     let reviewsWithListings = [];
@@ -115,8 +194,10 @@ module.exports.showProfile = async (req, res) => {
         }
     }
     
-    res.render("users/profile.ejs", { user, userListings, reviewsWithListings, userBookings, conversations });
+    res.render("users/profile.ejs", { user, userListings, reviewsWithListings, userBookings, hostReservations, hostStats, conversations });
 };
+
+
 
 module.exports.updateProfile = async (req, res) => {
     try {
@@ -134,7 +215,15 @@ module.exports.updateProfile = async (req, res) => {
 
         if (country !== undefined) user.country = country;
         if (bio !== undefined) user.bio = bio;
-        if (role !== undefined) user.role = role;
+        
+        // Enforce Host role if user manages any listings
+        const ownsListings = await Listing.exists({ owner: user._id });
+        if (ownsListings) {
+            user.role = 'Host';
+        } else if (role !== undefined) {
+            user.role = role;
+        }
+
         if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
         if (languages !== undefined) user.languages = languages;
 
@@ -145,6 +234,7 @@ module.exports.updateProfile = async (req, res) => {
         }
 
         await user.save();
+
         
         req.login(user, (err) => {
             if (err) {
@@ -165,21 +255,43 @@ module.exports.renderForgotForm = (req, res) => {
 };
 
 module.exports.forgotPassword = async (req, res) => {
-    const token = crypto.randomBytes(20).toString("hex");
-    const user = await User.findOne({ email: req.body.email });
-    if (!user) {
-        req.flash("error", "No account with that email address exists.");
-        return res.redirect("/forgot");
+    try {
+        const emailInput = req.body.email ? req.body.email.trim() : "";
+        if (!emailInput) {
+            req.flash("error", "Please enter your email address.");
+            return res.redirect("/forgot");
+        }
+
+        const token = crypto.randomBytes(20).toString("hex");
+        // Case-insensitive email search
+        const user = await User.findOne({ email: { $regex: new RegExp(`^${emailInput.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } });
+        
+        if (!user) {
+            req.flash("error", `No account associated with "${emailInput}" was found.`);
+            return res.redirect("/forgot");
+        }
+
+        user.resetPasswordToken = token;
+        user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+        await user.save();
+
+        const resetUrl = `http://${req.headers.host}/reset/${token}`;
+        console.log("\n==================================================");
+        console.log(`🔑 PASSWORD RESET REQUESTED FOR: ${user.email}`);
+        console.log(`🔗 DIRECT RESET LINK: ${resetUrl}`);
+        console.log("==================================================\n");
+
+        await sendPasswordResetEmail(user, req.headers.host, token);
+        
+        req.flash("success", `An email with password reset instructions has been sent to ${user.email}.`);
+        res.redirect("/forgot");
+    } catch (err) {
+        console.error("❌ Forgot Password Error:", err.message);
+        req.flash("error", "Something went wrong while requesting password reset: " + err.message);
+        res.redirect("/forgot");
     }
-
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000;
-    await user.save();
-
-    await sendPasswordResetEmail(user, req.headers.host, token);
-    req.flash("success", "An e-mail has been sent to " + user.email + " with further instructions.");
-    res.redirect("/forgot");
 };
+
 
 module.exports.renderResetForm = async (req, res) => {
     const user = await User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } });

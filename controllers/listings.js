@@ -6,9 +6,11 @@ const geocodingClient = mbxGeocoding({ accessToken: mapToken });
 module.exports.index = async (req, res) => {
     const { category, search } = req.query;
     let filter = {};
+
     if (category && category !== "all") {
         filter.category = category;
     }
+
     if (search) {
         filter.$or = [
             { title: { $regex: search, $options: "i" } },
@@ -20,8 +22,10 @@ module.exports.index = async (req, res) => {
     res.render("listings/index.ejs", { allListings, category, search });
 };
 
+
 module.exports.renderNewForm = (req, res) => {
-    res.render("listings/new.ejs");
+    const categories = Listing.CATEGORIES;
+    res.render("listings/new.ejs", { categories });
 };
 
 module.exports.showListing = async (req, res) => {
@@ -38,11 +42,15 @@ module.exports.showListing = async (req, res) => {
         return res.redirect("/listings");
     }
 
-    // Check if current user has a booking for this listing
+    // Check if current user has an ACTIVE paid booking for this listing
     let userBooking = null;
     if (req.user) {
         const Booking = require("../models/booking");
-        userBooking = await Booking.findOne({ user: req.user._id, listing: id });
+        userBooking = await Booking.findOne({
+            listing: id,
+            user: req.user._id,
+            paymentStatus: "paid"
+        }).sort({ createdAt: -1 });
     }
 
     res.render("listings/show.ejs", { listing, userBooking });
@@ -57,6 +65,8 @@ module.exports.createListing = async (req, res, next) => {
     const newUser = req.user._id;
     const newListing = new Listing(req.body.listing);
     newListing.owner = newUser;
+    newListing.isVerified = true;
+
     
     if (typeof req.files['listing[image]'] !== "undefined") {
         let url = req.files['listing[image]'][0].path;
@@ -70,10 +80,16 @@ module.exports.createListing = async (req, res, next) => {
 
     newListing.geometry = response.body.features[0].geometry;
     let savedListing = await newListing.save();
+
+    // Automatically update User role to Host
+    const User = require("../models/user");
+    await User.findByIdAndUpdate(newUser, { role: "Host" });
+
     console.log(savedListing);
-    req.flash("success", "New Listing Created!");
+    req.flash("success", "New Listing Created! You are now an active Host 🏠");
     res.redirect("/listings");
 };
+
 
 module.exports.editListing = async (req, res) => {
     let { id } = req.params;
@@ -82,9 +98,11 @@ module.exports.editListing = async (req, res) => {
         req.flash("error", "Listing you requested for does not exist!");
         return res.redirect("/listings");
     }
-    let originalImageUrl = listing.image.url;
+    let originalImageUrl = listing.image ? listing.image.url : "";
     originalImageUrl = originalImageUrl.replace("/upload", "/upload/w_250");
-    res.render("listings/edit.ejs", { listing, originalImageUrl });
+
+    const categories = Listing.CATEGORIES;
+    res.render("listings/edit.ejs", { listing, originalImageUrl, categories });
 };
 
 module.exports.updateListing = async (req, res) => {

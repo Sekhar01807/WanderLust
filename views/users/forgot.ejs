@@ -1,14 +1,39 @@
 <% layout("/layouts/boilerplate") %>
-<div class="row mt-3">
-    <h2 class="col-6 offset-3">Forgot Password</h2>
-    <div class="col-6 offset-3">
-        <form action="/forgot" method="POST" class="needs-validation" novalidate>
-            <div class="mb-3">
-                <label for="email" class="form-label">Email Address</label>
-                <input name="email" id="email" type="email" class="form-control" required />
-                <div class="invalid-feedback">Please enter a valid email.</div>
+
+<div class="row justify-content-center align-items-center my-5">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-5">
+        <%- include("../includes/flash.ejs") %>
+        <div class="card auth-card shadow-lg border-0 overflow-hidden">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <div class="auth-header-icon shadow-sm">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <h2 class="fw-bold mb-1">Forgot Password?</h2>
+                    <p class="text-muted small mb-0">Enter your email to receive a password reset link</p>
+                </div>
+
+                <form action="/forgot" method="POST" class="needs-validation" novalidate>
+                    <div class="mb-4">
+                        <label for="email" class="form-label fw-bold small text-muted">EMAIL ADDRESS</label>
+                        <div class="input-group auth-input-group border">
+                            <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                            <input name="email" id="email" type="email" class="form-control" placeholder="name@example.com" required autocomplete="email" />
+                        </div>
+                        <div class="invalid-feedback ms-1 mt-1 small">Please enter a valid email address.</div>
+                    </div>
+                    <button class="btn auth-btn-submit w-100 fs-5 mb-3">
+                        <i class="fa-solid fa-paper-plane me-2"></i>Send Reset Link
+                    </button>
+                </form>
+
+                <hr class="my-4 opacity-25">
+                <p class="text-center mb-0 text-muted">
+                    Remembered your password? 
+                    <a href="/login" class="fw-bold text-decoration-none ms-1" style="color: #ff385c;">Back to Log In</a>
+                </p>
             </div>
-            <button class="btn btn-success">Reset Password</button>
-        </form>
+        </div>
     </div>
 </div>
+

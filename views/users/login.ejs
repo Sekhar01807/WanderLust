@@ -1,29 +1,57 @@
 <% layout("/layouts/boilerplate") %>
 
-<div class="row mt-5 mb-5">
-    <div class="col-12 col-md-6 offset-md-3">
+<div class="row justify-content-center align-items-center my-5">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-5">
         <%- include("../includes/flash.ejs") %>
-        <div class="card shadow border-0 rounded-4">
+        <div class="card auth-card shadow-lg border-0 overflow-hidden">
             <div class="card-body p-4 p-md-5">
-                <h2 class="mb-4 fw-bold text-center" style="color: #ff385c;"><i class="fa-solid fa-right-to-bracket me-2"></i>Welcome Back</h2>
+                <div class="text-center mb-4">
+                    <div class="auth-header-icon shadow-sm">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                    </div>
+                    <h2 class="fw-bold mb-1">Welcome Back</h2>
+                    <p class="text-muted small mb-0">Log in to your WanderLust account</p>
+                </div>
+
                 <form action="/login" method="POST" id="loginForm" novalidate>
-    <div class="mb-3">  
-        <label for="username" class="form-label"> Username</label>
-        <input type="text" name="username" id="username" class="form-control" required> 
-        <div class="invalid-feedback"> Username Required ! </div>
-    </div>
-     <div class="mb-3">  
-        <label for="password" class="form-label"> Password </label>
-        <input type="password" name="password" id="password" class="form-control" required>
-        <div class="invalid-feedback"> Password Required ! </div> 
-    </div>
-                    <button class="btn btn-danger w-100 py-2 fs-5 fw-bold rounded-3 mt-3" style="background-color: #ff385c; border: none; transition: 0.2s;">
-                        Login
+                    <!-- Username or Email -->
+                    <div class="mb-3">
+                        <label for="username" class="form-label fw-bold small text-muted">USERNAME OR EMAIL</label>
+                        <div class="input-group auth-input-group border">
+                            <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                            <input type="text" name="username" id="username" class="form-control" placeholder="Enter username or email address" required autocomplete="username">
+                        </div>
+                        <div class="invalid-feedback ms-1 mt-1 small">Username or email is required</div>
+                    </div>
+
+
+                    <!-- Password -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label for="password" class="form-label fw-bold small text-muted mb-0">PASSWORD</label>
+                            <a href="/forgot" class="small fw-semibold text-decoration-none" style="color: #ff385c;">Forgot?</a>
+                        </div>
+                        <div class="input-group auth-input-group border">
+                            <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                            <input type="password" name="password" id="password" class="form-control" placeholder="Enter your password" required autocomplete="current-password">
+                            <button type="button" class="btn input-group-text toggle-password-btn" id="togglePasswordBtn" title="Toggle password visibility">
+                                <i class="fa-solid fa-eye" id="togglePasswordIcon"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback ms-1 mt-1 small">Password is required</div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn auth-btn-submit w-100 fs-5 mb-3">
+                        <i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Log In
                     </button>
                 </form>
-                <hr class="my-4">
-                <p class="text-center mb-0">Don't have an account? <a href="/signup" class="fw-bold" style="color: #ff385c; text-decoration: none;">Sign Up</a></p>
-                <p class="text-center mt-2 mb-0"><a href="/forgot" class="small text-muted">Forgot Password?</a></p>
+
+                <hr class="my-4 opacity-25">
+                <p class="text-center mb-0 text-muted">
+                    Don't have an account? 
+                    <a href="/signup" class="fw-bold text-decoration-none ms-1" style="color: #ff385c;">Sign Up</a>
+                </p>
             </div>
         </div>
     </div>
@@ -31,36 +59,53 @@
 
 <script>
 (() => {
-  const form = document.getElementById('loginForm');
-  const inputs = form.querySelectorAll('input[required]');
+    // Password visibility toggle
+    const toggleBtn = document.getElementById('togglePasswordBtn');
+    const passwordInput = document.getElementById('password');
+    const toggleIcon = document.getElementById('togglePasswordIcon');
 
-  // While typing, show red border if empty, neutral if filled (never green)
-  inputs.forEach(input => {
-    input.addEventListener('input', () => {
-      if (input.value.trim() === '') {
-        input.classList.add('is-invalid');
-      } else {
-        input.classList.remove('is-invalid');
-        // Remove is-valid so it does NOT turn green
-        input.classList.remove('is-valid');
-      }
-    });
-  });
-
-  // On submit, validate — show red for empty fields
-  form.addEventListener('submit', (e) => {
-    let hasError = false;
-    inputs.forEach(input => {
-      if (!input.value.trim()) {
-        input.classList.add('is-invalid');
-        hasError = true;
-      }
-    });
-    if (hasError) {
-      e.preventDefault();
-      e.stopPropagation();
+    if (toggleBtn && passwordInput && toggleIcon) {
+        toggleBtn.addEventListener('click', () => {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            toggleIcon.className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        });
     }
-    // If no empty fields, form submits to server for actual auth check
-  });
+
+    // Custom Validation
+    const form = document.getElementById('loginForm');
+    if (form) {
+        const inputs = form.querySelectorAll('input[required]');
+
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                const group = input.closest('.auth-input-group');
+                if (input.value.trim() === '') {
+                    input.classList.add('is-invalid');
+                    if (group) group.classList.add('border-danger');
+                } else {
+                    input.classList.remove('is-invalid');
+                    input.classList.remove('is-valid');
+                    if (group) group.classList.remove('border-danger');
+                }
+            });
+        });
+
+        form.addEventListener('submit', (e) => {
+            let hasError = false;
+            inputs.forEach(input => {
+                const group = input.closest('.auth-input-group');
+                if (!input.value.trim()) {
+                    input.classList.add('is-invalid');
+                    if (group) group.classList.add('border-danger');
+                    hasError = true;
+                }
+            });
+            if (hasError) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+    }
 })();
 </script>

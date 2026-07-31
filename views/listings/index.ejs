@@ -1,8 +1,16 @@
 <% layout("/layouts/boilerplate") %>
 <body>
     <%- include("../includes/flash.ejs") %>
-    <div class="filters-main-container d-flex align-items-center mt-3 mb-4">
-        <div id="filter" class="d-flex flex-nowrap overflow-auto" style="scrollbar-width: none; -ms-overflow-style: none;">
+    <div class="filters-main-container d-flex align-items-center mt-3 mb-4 gap-2 position-relative mx-auto px-md-3" style="max-width: 95%;">
+
+        <!-- Scroll Left Button -->
+        <button type="button" id="filterScrollLeft" class="btn btn-light rounded-circle shadow-sm border d-none d-md-flex align-items-center justify-content-center p-0 flex-shrink-0" style="width: 32px; height: 32px; z-index: 10;" title="Scroll Left">
+            <i class="fa-solid fa-chevron-left" style="font-size: 0.8rem;"></i>
+        </button>
+
+        <!-- Category Pills Track -->
+        <div id="filter" class="d-flex flex-nowrap overflow-auto flex-grow-1 align-items-center py-1 px-2" style="scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; gap: 3.2rem;">
+
             <a href="/listings" class="filter-link">
                 <div class="filter <%= category === 'all' ? 'filter-active' : '' %>">
                     <div><i class="fa-solid fa-border-all"></i></div>
@@ -41,13 +49,13 @@
             </a>
             <a href="/listings?category=star_hotels" class="filter-link">
                 <div class="filter <%= category === 'star_hotels' ? 'filter-active' : '' %>">
-                    <div><i class="fa-solid fa-star"></i></div>
+                    <div><i class="fa-solid fa-hotel"></i></div>
                     <p>Hotels</p>
                 </div>
             </a>
             <a href="/listings?category=private_house" class="filter-link">
                 <div class="filter <%= category === 'private_house' ? 'filter-active' : '' %>">
-                    <div><i class="fa-solid fa-house"></i></div>
+                    <div><i class="fa-solid fa-house-user"></i></div>
                     <p>Private</p>
                 </div>
             </a>
@@ -69,27 +77,46 @@
                     <p>Nearby</p>
                 </div>
             </a>
-            <a href="/wishlist" class="filter-link">
-                <div class="filter <%= category === 'wishlist' ? 'filter-active' : '' %>">
-                    <div><i class="fa-solid fa-heart"></i></div>
-                    <p>Wishlist</p>
+
+            <a href="/listings?category=beachfront" class="filter-link">
+                <div class="filter <%= category === 'beachfront' ? 'filter-active' : '' %>">
+                    <div><i class="fa-solid fa-umbrella-beach"></i></div>
+                    <p>Beachfront</p>
+                </div>
+            </a>
+            <a href="/listings?category=camping" class="filter-link">
+                <div class="filter <%= category === 'camping' ? 'filter-active' : '' %>">
+                    <div><i class="fa-solid fa-tent"></i></div>
+                    <p>Camping</p>
+                </div>
+            </a>
+            <a href="/listings?category=castles" class="filter-link">
+                <div class="filter <%= category === 'castles' ? 'filter-active' : '' %>">
+                    <div><i class="fa-solid fa-chess-rook"></i></div>
+                    <p>Castles</p>
+                </div>
+            </a>
+            <a href="/listings?category=arctic" class="filter-link">
+                <div class="filter <%= category === 'arctic' ? 'filter-active' : '' %>">
+                    <div><i class="fa-solid fa-snowflake"></i></div>
+                    <p>Arctic</p>
                 </div>
             </a>
             <a href="/listings?category=others" class="filter-link">
                 <div class="filter <%= category === 'others' ? 'filter-active' : '' %>">
-                    <div><i class="fa-solid fa-ellipsis"></i></div>
+                    <div><i class="fa-solid fa-sliders"></i></div>
                     <p>Others</p>
                 </div>
             </a>
+
         </div>
 
-        <div class="tax-toggle ms-auto d-none d-md-block">
-            <div class="form-check-reverse form-switch">
-                <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault">
-                <label class="form-check-label fw-bold" for="switchCheckDefault" style="white-space: nowrap;">Display total before taxes</label>
-            </div>
-        </div>
+        <!-- Scroll Right Button -->
+        <button type="button" id="filterScrollRight" class="btn btn-light rounded-circle shadow-sm border d-none d-md-flex align-items-center justify-content-center p-0 flex-shrink-0" style="width: 32px; height: 32px; z-index: 10;" title="Scroll Right">
+            <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i>
+        </button>
     </div>
+
 
     <% if(search && search.trim()) { %>
         <div class="mt-3 mb-2 d-flex align-items-center">
@@ -106,20 +133,30 @@
             <a href="/listings" class="btn btn-outline-danger">View All Listings</a>
         </div>
     <% } else { %>
-    <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-3">
+    <div id="listingsGridContainer" class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-3">
         <% for(let listing of allListings){ %>
             <div class="col mb-4">
-            <div class="card listing-card shadow-sm border-0 rounded-4 overflow-hidden h-100">
-                <a href="/listings/<%= listing._id %>" class="listing-link">
+                <div class="card listing-card shadow-sm border-0 rounded-4 overflow-hidden h-100">
+                    <a href="/listings/<%= listing._id %>" class="listing-link">
+
+
                     <div class="listing-img-container" style="overflow: hidden; border-radius: 1rem; position: relative;">
-                        <img src="<%= listing.image.url %>" class="card-img-top" alt="image" style="height:20rem; border-radius: 1rem !important;">
+                        <img src="<%= listing.image ? listing.image.url : '' %>" class="card-img-top" alt="listing_image" style="height:20rem; object-fit:cover; border-radius: 1rem !important;">
                         <div class="card-img-overlay"></div>
-                        <!-- Book Now overlay -->
+                        <!-- Hover overlay (Customized for Host vs Guest) -->
+                        <% const isListingOwner = typeof currUser !== 'undefined' && currUser && listing.owner && (listing.owner._id ? listing.owner._id.toString() === currUser._id.toString() : listing.owner.toString() === currUser._id.toString()); %>
                         <div class="book-now-overlay">
-                            <span class="book-now-text"><i class="fa-solid fa-calendar-check me-2"></i>Book Now</span>
+                            <% if (isListingOwner) { %>
+                                <span class="book-now-text" style="background: rgba(33, 37, 41, 0.9);"><i class="fa-solid fa-house-user me-2"></i>Your Listing</span>
+                            <% } else { %>
+                                <span class="book-now-text"><i class="fa-solid fa-calendar-check me-2"></i>Book Now</span>
+                            <% } %>
                         </div>
                     </div>
                 </a>
+
+
+
                 
                 <% if(typeof currUser !== 'undefined' && currUser) { %>
                 <div class="wishlist-btn-form">
@@ -139,8 +176,7 @@
                         <p class="card-text mb-1 text-muted"><i class="fa-solid fa-location-dot"></i> <%= listing.location %>, <%= listing.country %></p>
                         <p class="card-text mb-1"><%= listing.description %></p>
                         <p class="card-text">
-                            <strong>&#8377 <%= listing.price ? listing.price.toLocaleString() : "N/A" %></strong>/Night
-                            <i class="tax-info text-muted" style="font-size: 0.9em;">  &nbsp; +18% GST</i>
+                            <strong>&#8377 <%= listing.price ? listing.price.toLocaleString() : "N/A" %></strong> / Night
                         </p>
                     </div>
                 </a>
@@ -152,17 +188,34 @@
 </body>
 
 <script>
-    let taxSwitch = document.getElementById("switchCheckDefault");
-    taxSwitch.addEventListener("click", () => {
-        let taxInfo = document.getElementsByClassName("tax-info");
-        for (info of taxInfo) {
-            if (info.style.display != "inline") {
-                info.style.display = "inline";
-            } else {
-                info.style.display = "none";
+    // Filter Bar Scroll Navigation Controls & Active Icon Auto-Centering
+    const filterTrack = document.getElementById('filter');
+    const scrollLeftBtn = document.getElementById('filterScrollLeft');
+    const scrollRightBtn = document.getElementById('filterScrollRight');
+
+    if (filterTrack && scrollLeftBtn && scrollRightBtn) {
+        scrollLeftBtn.addEventListener('click', () => {
+            filterTrack.scrollBy({ left: -260, behavior: 'smooth' });
+        });
+        scrollRightBtn.addEventListener('click', () => {
+            filterTrack.scrollBy({ left: 260, behavior: 'smooth' });
+        });
+    }
+
+    // Auto-scroll active filter pill into view on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        const activeFilter = document.querySelector('.filter-active');
+        if (activeFilter && filterTrack) {
+            const activeLink = activeFilter.closest('.filter-link');
+            if (activeLink) {
+                const trackRect = filterTrack.getBoundingClientRect();
+                const linkRect = activeLink.getBoundingClientRect();
+                const scrollOffset = (linkRect.left + filterTrack.scrollLeft) - (trackRect.left + (trackRect.width / 2) - (linkRect.width / 2));
+                filterTrack.scrollTo({ left: scrollOffset, behavior: 'smooth' });
             }
         }
     });
+
 
     // Wishlist AJAX Toggle (with SweetAlert2 Toasts)
     const Toast = Swal.mixin({
@@ -219,7 +272,7 @@
                     }
                 }
             } catch (err) {
-                console.error('Wishlist toggle failed', err);
+                console.error('Wishlist toggle error:', err);
                 Toast.fire({
                     icon: 'error',
                     title: 'Something went wrong'

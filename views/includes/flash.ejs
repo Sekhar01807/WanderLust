@@ -1,41 +1,69 @@
 <% if(success && success.length) { %>
-    <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 2000;">
-        <div class="toast show animate__animated animate__fadeInDown shadow-lg border-0" role="alert" aria-live="assertive" aria-atomic="true" style="border-radius: 1rem; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); min-width: 300px;">
+    <div class="position-fixed top-0 start-50 translate-middle-x p-3 flash-toast-container" style="z-index: 9999;">
+        <div class="toast show animate__animated animate__fadeInDown shadow-lg border flash-toast-card" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-body d-flex align-items-center p-3">
-                <div class="bg-success rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                    <i class="fa-solid fa-check text-white"></i>
+                <div class="bg-success rounded-circle p-2 me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px;">
+                    <i class="fa-solid fa-check text-white fs-5"></i>
                 </div>
                 <div class="flex-grow-1">
                     <h6 class="mb-0 fw-bold text-success">Success</h6>
-                    <p class="mb-0 text-muted small"><%= success %></p>
+                    <p class="mb-0 small opacity-75"><%= success %></p>
                 </div>
-                <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button type="button" class="btn-close ms-3" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     </div>
 <% } %>
 
 <% if(error && error.length) { %>
-    <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 2000;">
-        <div class="toast show animate__animated animate__fadeInDown shadow-lg border-0" role="alert" aria-live="assertive" aria-atomic="true" style="border-radius: 1rem; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); min-width: 300px;">
+    <div class="position-fixed top-0 start-50 translate-middle-x p-3 flash-toast-container" style="z-index: 9999;">
+        <div class="toast show animate__animated animate__fadeInDown shadow-lg border flash-toast-card" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-body d-flex align-items-center p-3">
-                <div class="bg-danger rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                    <i class="fa-solid fa-circle-exclamation text-white"></i>
+                <div class="bg-danger rounded-circle p-2 me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px;">
+                    <i class="fa-solid fa-circle-exclamation text-white fs-5"></i>
                 </div>
                 <div class="flex-grow-1">
                     <h6 class="mb-0 fw-bold text-danger">Error</h6>
-                    <p class="mb-0 text-muted small"><%= error %></p>
+                    <p class="mb-0 small opacity-75"><%= error %></p>
                 </div>
-                <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button type="button" class="btn-close ms-3" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     </div>
 <% } %>
 
 <style>
+.flash-toast-card {
+    border-radius: 1.25rem !important;
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-color: rgba(0,0,0,0.1) !important;
+    min-width: 320px;
+    max-width: 450px;
+}
+
+[data-bs-theme="dark"] .flash-toast-card {
+    background: #2b3035 !important;
+    color: #f8f9fa !important;
+    border-color: #495057 !important;
+}
+
 @keyframes fadeInDown {
     from { opacity: 0; transform: translate3d(0, -100%, 0); }
     to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
-.animate__fadeInDown { animation: fadeInDown 0.5s ease-out; }
+.animate__fadeInDown { animation: fadeInDown 0.4s ease-out; }
 </style>
+
+<script>
+(() => {
+    // Auto dismiss flash messages after 5 seconds
+    setTimeout(() => {
+        const flashToasts = document.querySelectorAll('.flash-toast-container .toast');
+        flashToasts.forEach(t => {
+            t.classList.remove('show');
+            t.classList.add('hide');
+        });
+    }, 5000);
+})();
+</script>

@@ -1,5 +1,13 @@
 require('dotenv').config();
 
+const dns = require("dns");
+try {
+    dns.setServers(["8.8.8.8", "8.8.4.4"]);
+} catch (e) {
+    console.log("DNS setServers failed:", e.message);
+}
+
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -39,9 +47,61 @@ main()
         console.log(err);
     });
 
+async function seedCategoryProperties() {
+    try {
+        const Listing = require('./models/listing');
+        const User = require('./models/user');
+        const sampleCats = [
+            {
+                title: "Maldives Luxury Overwater Villa",
+                description: "Wake up to crystal-clear turquoise ocean waters, a private infinity pool, and direct coral reef access right from your deck.",
+                image: { filename: "maldives_villa", url: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80" },
+                price: 24500, location: "Male", country: "Maldives", category: "beachfront",
+                geometry: { type: "Point", coordinates: [73.5093, 4.1755] }
+            },
+            {
+                title: "Glamping Dome under Starlit Skies",
+                description: "Experience luxury wilderness camping with transparent heated glass domes, private fire pit, and breathtaking mountain views.",
+                image: { filename: "glamping_dome", url: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1200&q=80" },
+                price: 8900, location: "Manali", country: "India", category: "camping",
+                geometry: { type: "Point", coordinates: [77.1887, 32.2432] }
+            },
+            {
+                title: "Royal Edinburgh Historic Castle Suite",
+                description: "Live like royalty in a restored 16th-century grand fortress featuring antique fireplaces, vaulted dining halls, and hilltop vistas.",
+                image: { filename: "edinburgh_castle", url: "https://images.unsplash.com/photo-1585543805890-6051f7829f98?auto=format&fit=crop&w=1200&q=80" },
+                price: 32000, location: "Edinburgh", country: "United Kingdom", category: "castles",
+                geometry: { type: "Point", coordinates: [-3.1883, 55.9533] }
+            },
+            {
+                title: "Tromsø Heated Glass Igloo & Aurora Hideaway",
+                description: "Immerse yourself in a frozen arctic wonderland with 360-degree panoramic views of the dancing Northern Lights.",
+                image: { filename: "tromso_igloo", url: "https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?auto=format&fit=crop&w=1200&q=80" },
+                price: 19800, location: "Tromso", country: "Norway", category: "arctic",
+                geometry: { type: "Point", coordinates: [18.9553, 69.6492] }
+            }
+        ];
+
+        let owner = await User.findOne();
+        let ownerId = owner ? owner._id : "672ef4689a83bb82eac61046";
+
+        for (let item of sampleCats) {
+            const exists = await Listing.findOne({ category: item.category });
+            if (!exists) {
+                await new Listing({ ...item, owner: ownerId }).save();
+                console.log(`Auto-seeded category property: ${item.title}`);
+            }
+        }
+    } catch (e) {
+        console.log("Auto-seeding completed.");
+    }
+}
+
 async function main() {
     await mongoose.connect(dbUrl);
+    await seedCategoryProperties();
 }
+
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -56,7 +116,8 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'", "https://res.cloudinary.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://api.mapbox.com", "https://unpkg.com", "https://cdn.jsdelivr.net", "https://js.stripe.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://api.mapbox.com", "https://unpkg.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://js.stripe.com"],
+
             styleSrc: ["'self'", "'unsafe-inline'", "https://api.mapbox.com", "https://unpkg.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://kit.fontawesome.com"],
             imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://images.unsplash.com", "https://*.mapbox.com", "https://*.stripe.com"],
             connectSrc: ["'self'", "*", "blob:", "data:"],
@@ -82,7 +143,12 @@ const limiter = rateLimit({
 app.use("/login", limiter);
 app.use("/signup", limiter);
 
-const MongoStore = require("connect-mongo");
+let MongoStore = require("connect-mongo");
+
+// Defensive check for different connect-mongo versions
+if (typeof MongoStore !== "function" && MongoStore.default) {
+    MongoStore = MongoStore.default;
+}
 
 const store = MongoStore.create({
     mongoUrl: dbUrl,
@@ -150,7 +216,11 @@ app.use("/listings/:id/reviews", reviewRouter);
 app.use("/listings/:id/booking", bookingRouter);
 app.use("/messages", messageRouter);
 app.use("/notifications", notificationRouter);
+
+
 app.use("/", userRouter);
+
+
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.get(/^\/\.well-known\/.*/, (req, res) => res.status(204).end());

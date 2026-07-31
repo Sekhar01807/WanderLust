@@ -5,7 +5,7 @@
             <%- include("../includes/flash.ejs") %>
             <div class="card shadow border-0 rounded-4">
                 <div class="card-body p-4 p-md-5">
-                    <h3 class="mb-4 fw-bold" style="color: #ff385c;"><i class="fa-solid fa-pen-to-square me-2"></i>Edit Listing</h3>
+                    <h3 class="mb-4 fw-bold" style="color: #ff385c;"><i class="fa-solid fa-pen-to-square me-2"></i>Edit Property</h3>
                     <form method="POST" action="/listings/<%= listing._id %>?_method=PUT" novalidate class="needs-validation"
                 enctype="multipart/form-data">
                 <div class="mb-3">
@@ -22,9 +22,10 @@
                 <div class="mb-4">
                     <label class="form-label fw-bold">Main Listing Image</label>
                     <div class="position-relative d-block w-100 mb-2" style="cursor: pointer; border-radius: 1rem; overflow: hidden;" onclick="document.getElementById('listingImage').click();">
-                        <img id="listing-preview" src="<%=orginalImageUrl%>" class="img-fluid" style="width: 100%; height: 300px; object-fit: cover;">
+                        <img id="listing-preview" src="<%= typeof originalImageUrl !== 'undefined' ? originalImageUrl : (listing.image ? listing.image.url : '') %>" class="img-fluid" style="width: 100%; height: 300px; object-fit: cover;">
                         <!-- Hover Edit Overlay -->
                         <div class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center listing-overlay" style="background: rgba(0,0,0,0.5); opacity: 0; transition: 0.2s;">
+
                             <i class="fa-solid fa-camera text-white mb-2" style="font-size: 3rem;"></i>
                             <span class="text-white fw-bold fs-5">Change Main Photo</span>
                         </div>
@@ -64,22 +65,26 @@
                     <div class="mb-3 col-md-4">
                         <label for="category" class="form-label">Category</label>
                         <select name="listing[category]" class="form-select" required>
-                            <% for(let cat of categories) { %>
+                            <% const categoryList = (typeof categories !== 'undefined' && categories.length) ? categories : ["trending", "rooms", "cities", "pools", "hills", "star_hotels", "private_house", "best_deals", "premium", "nearby", "others"]; %>
+                            <% for(let cat of categoryList) { %>
                                 <option value="<%= cat %>" <%= listing.category === cat ? 'selected' : '' %>><%= cat.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase()) %></option>
                             <% } %>
                         </select>
+
                         <div class="invalid-feedback">Select a category</div>
                     </div>
                 </div>
                 <div class="mb-3">
                     <label for="location" class="form-label">Location</label>
-                    <input type="text" name="listing[location]" value="<%= listing.location %>" class="form-control"
-                        required>
+                    <input type="text" name="listing[location]" value="<%= listing.location %>" class="form-control" required>
                     <div class="invalid-feedback">Location is Required</div>
+
                 </div>
                 <button class="btn btn-danger w-100 py-2 fs-5 fw-bold rounded-3" style="background-color: #ff385c; border: none; transition: 0.2s;">
                     <i class="fa-solid fa-cloud-arrow-up me-2"></i>Save Changes
                 </button>
+
+
                     </form>
                 </div>
             </div>

@@ -1,41 +1,56 @@
 <% layout("/layouts/boilerplate") %>
 <div class="row mt-5 animate__animated animate__fadeIn">
-    <div class="col-md-8 offset-md-2 text-center py-5">
-        <div class="error-container p-5 rounded-5 shadow-lg position-relative overflow-hidden" style="background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.3);">
+    <div class="col-md-8 offset-md-2 text-center py-4">
+        <div class="error-container-card p-5 rounded-5 shadow-lg position-relative overflow-hidden">
             <!-- Decorative Background Element -->
-            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: radial-gradient(circle at top right, rgba(255, 56, 92, 0.05), transparent); z-index: -1;"></div>
+            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: radial-gradient(circle at top right, rgba(255, 56, 92, 0.08), transparent); z-index: 0;"></div>
             
-            <div class="mb-4">
-                <i class="fa-solid fa-compass fa-spin-slow mb-4" style="font-size: 5rem; color: #ff385c; --fa-animation-duration: 10s;"></i>
-                <h1 class="display-4 fw-bold mb-2" style="letter-spacing: -1px;">Oops! You're Lost.</h1>
-                <p class="fs-5 text-muted mb-4">Even the best travelers take a wrong turn sometimes.</p>
+            <div class="mb-4 position-relative" style="z-index: 1;">
+                <i class="fa-solid fa-compass fa-spin-slow mb-4" style="font-size: 5.5rem; color: #ff385c; --fa-animation-duration: 12s;"></i>
+                <h1 class="display-4 fw-bold mb-2" style="letter-spacing: -1px;">Page Not Found</h1>
+                <p class="fs-5 text-muted mb-4">The page you are looking for does not exist or has been moved.</p>
             </div>
 
-            <div class="alert alert-danger border-0 rounded-4 p-4 mb-5 shadow-sm" style="background: #fff5f6;">
-                <div class="d-flex align-items-center justify-content-center mb-2">
-                    <i class="fa-solid fa-circle-exclamation me-2 text-danger"></i>
-                    <h6 class="mb-0 fw-bold text-danger">System Message</h6>
-                </div>
-                <p class="mb-0 text-dark font-monospace small"><%= message %></p>
-            </div>
 
-            <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                <a href="/listings" class="btn btn-danger btn-lg px-5 py-3 fw-bold rounded-pill shadow-sm" style="background: linear-gradient(135deg, #ff385c, #e03150); border: none;">
-                    <i class="fa-solid fa-house-chimney me-2"></i>Back to Exploring
+            <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 position-relative" style="z-index: 1;">
+                <a href="/" class="btn btn-danger btn-lg px-4 py-3 fw-bold rounded-pill shadow-sm" style="background: linear-gradient(135deg, #ff385c, #e03150); border: none;">
+                    <i class="fa-solid fa-house me-2"></i>Return to Home Page
                 </a>
-                <button onclick="window.history.back()" class="btn btn-outline-dark btn-lg px-5 py-3 fw-bold rounded-pill">
-                    <i class="fa-solid fa-arrow-left me-2"></i>Go Back
-                </button>
+                <a href="/listings" class="btn btn-outline-danger btn-lg px-4 py-3 fw-bold rounded-pill shadow-sm">
+                    <i class="fa-solid fa-compass me-2"></i>Explore Listings
+                </a>
             </div>
 
-            <div class="mt-5 pt-4 border-top">
-                <p class="text-muted small mb-0">Need help? <a href="mailto:support@wanderlust.com" class="text-danger text-decoration-none fw-bold">Contact our Concierge</a></p>
+
+            <div class="mt-5 pt-4 border-top position-relative" style="z-index: 1;">
+                <p class="text-muted small mb-0">Need assistance? <a href="/messages" class="text-danger text-decoration-none fw-bold">Contact Concierge Support</a></p>
             </div>
         </div>
     </div>
 </div>
 
 <style>
+    .error-container-card {
+        background: #ffffff;
+        color: #212529;
+        border: 1px solid #e0e0e0;
+        transition: transform 0.3s ease;
+    }
+    .error-msg-box {
+        background: #fff5f6;
+        color: #212529;
+    }
+
+    [data-bs-theme="dark"] .error-container-card {
+        background: #1e2227 !important;
+        color: #f8f9fa !important;
+        border: 1px solid #343a40 !important;
+    }
+    [data-bs-theme="dark"] .error-msg-box {
+        background: #2b3035 !important;
+        color: #f8f9fa !important;
+    }
+
     .fa-spin-slow {
         animation: fa-spin 20s infinite linear;
     }
@@ -43,10 +58,10 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-    .error-container {
-        transition: transform 0.3s ease;
-    }
-    .error-container:hover {
-        transform: translateY(-5px);
+    .error-container-card:hover {
+        transform: translateY(-4px);
     }
 </style>
+
+
+

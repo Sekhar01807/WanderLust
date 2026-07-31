@@ -1,17 +1,44 @@
 <% layout("/layouts/boilerplate") %>
-<div class="row mt-3">
-    <h2 class="col-6 offset-3">Reset Password</h2>
-    <div class="col-6 offset-3">
-        <form action="/reset/<%= token %>" method="POST" class="needs-validation" novalidate>
-            <div class="mb-3">
-                <label for="password" class="form-label">New Password</label>
-                <input name="password" id="password" type="password" class="form-control" required />
+
+<div class="row justify-content-center align-items-center my-5">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-5">
+        <%- include("../includes/flash.ejs") %>
+        <div class="card auth-card shadow-lg border-0 overflow-hidden">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <div class="auth-header-icon shadow-sm">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h2 class="fw-bold mb-1">Reset Password</h2>
+                    <p class="text-muted small mb-0">Enter your new password below</p>
+                </div>
+
+                <form action="/reset/<%= token %>" method="POST" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="password" class="form-label fw-bold small text-muted">NEW PASSWORD</label>
+                        <div class="input-group auth-input-group border">
+                            <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                            <input name="password" id="password" type="password" class="form-control" placeholder="Enter new password" required autocomplete="new-password" />
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="confirm" class="form-label fw-bold small text-muted">CONFIRM PASSWORD</label>
+                        <div class="input-group auth-input-group border">
+                            <span class="input-group-text"><i class="fa-solid fa-lock-open"></i></span>
+                            <input name="confirm" id="confirm" type="password" class="form-control" placeholder="Confirm new password" required autocomplete="new-password" />
+                        </div>
+                    </div>
+                    <button class="btn auth-btn-submit w-100 fs-5 mb-3">
+                        <i class="fa-solid fa-check-circle me-2"></i>Update Password
+                    </button>
+                </form>
+
+                <hr class="my-4 opacity-25">
+                <p class="text-center mb-0 text-muted">
+                    <a href="/login" class="fw-bold text-decoration-none" style="color: #ff385c;">Back to Log In</a>
+                </p>
             </div>
-            <div class="mb-3">
-                <label for="confirm" class="form-label">Confirm Password</label>
-                <input name="confirm" id="confirm" type="password" class="form-control" required />
-            </div>
-            <button class="btn btn-success">Update Password</button>
-        </form>
+        </div>
     </div>
 </div>
+

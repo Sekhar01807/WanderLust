@@ -1,0 +1,39 @@
+<% if (typeof currUser !== 'undefined' && currUser) { %>
+<!-- Floating Booking & Trip Shortcut Button -->
+<a href="/profile" id="floatingBookingFab" class="floating-booking-fab text-decoration-none" title="My Trips & Bookings">
+    <i class="fa-solid fa-suitcase fs-4 text-white"></i>
+    <span id="floatingBookingBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success border border-light shadow-sm d-none" style="font-size: 0.75rem; padding: 0.35em 0.6em;">
+        0
+    </span>
+</a>
+
+<script>
+(() => {
+    const badge = document.getElementById('floatingBookingBadge');
+    if (!badge) return;
+
+    async function checkBookingCount() {
+        try {
+            const res = await fetch('/notifications/summary');
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            if (data.success && data.alerts) {
+                const bookingAlertCount = data.alerts.filter(a => a.type === 'booking' || a.type === 'host_booking').length;
+                if (bookingAlertCount > 0) {
+                    badge.textContent = bookingAlertCount > 9 ? '9+' : bookingAlertCount;
+                    badge.classList.remove('d-none');
+                } else {
+                    badge.classList.add('d-none');
+                }
+            }
+        } catch (err) {
+            console.error('Failed to check booking alerts count', err);
+        }
+    }
+
+    checkBookingCount();
+    setInterval(checkBookingCount, 30000);
+})();
+</script>
+<% } %>

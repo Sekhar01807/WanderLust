@@ -42,17 +42,52 @@ router.get("/summary", isLoggedIn, wrapAsync(async (req, res) => {
 
     const messageAlerts = unreadMessages.map(m => ({
         type: "message",
-        senderName: m.sender.username,
-        senderId: m.sender._id,
-        listingId: m.listing._id,
+        senderName: m.sender ? m.sender.username : 'User',
+        senderId: m.sender ? m.sender._id : '',
+        listingId: m.listing ? m.listing._id : '',
         content: m.content,
-        message: `New message from @${m.sender.username} about ${m.listing.title}`
+        message: `New message from @${m.sender ? m.sender.username : 'User'} about ${m.listing ? m.listing.title : 'stay'}`
     }));
+
+    // 3. Fetch Host Alerts (New Bookings & Cancellations for Host Stays)
+    const Listing = require("../models/listing.js");
+    const hostListings = await Listing.find({ owner: userId }).select("_id title");
+    const hostListingIds = hostListings.map(l => l._id);
+    
+    let hostAlerts = [];
+    if (hostListingIds.length > 0) {
+        const hostBookings = await Booking.find({
+            listing: { $in: hostListingIds },
+            user: { $ne: userId }
+        }).populate("user listing").sort({ createdAt: -1 }).limit(10);
+
+        hostBookings.forEach(b => {
+            if (!b.listing || !b.user) return;
+            if (b.paymentStatus === "paid") {
+                hostAlerts.push({
+                    type: "host_booking",
+                    id: b._id,
+                    guestName: b.user.username,
+                    listingTitle: b.listing.title,
+                    message: `🎉 New Booking Alert! @${b.user.username} booked ${b.listing.title} (₹${b.totalPrice ? b.totalPrice.toLocaleString('en-IN') : '0'})`
+                });
+            } else if (b.paymentStatus === "cancelled") {
+                hostAlerts.push({
+                    type: "host_cancellation",
+                    id: b._id,
+                    guestName: b.user.username,
+                    listingTitle: b.listing.title,
+                    message: `⚠️ Cancellation Alert: @${b.user.username} cancelled their stay at ${b.listing.title}`
+                });
+            }
+        });
+    }
 
     res.json({
         success: true,
-        alerts: [...bookingAlerts, ...messageAlerts]
+        alerts: [...bookingAlerts, ...messageAlerts, ...hostAlerts]
     });
 }));
 
 module.exports = router;
+

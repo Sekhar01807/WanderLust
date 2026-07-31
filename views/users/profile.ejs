@@ -24,7 +24,8 @@
                     </div>
                 </div>
                 <h4 class="card-title">@<%= user.username %></h4>
-                <p class="mb-2"><span class="badge <%= user.role === 'Host' ? 'bg-danger' : 'bg-primary' %> rounded-pill px-3"><%= user.role || 'Traveler' %></span></p>
+                <% const isHost = (userListings.length > 0 || user.role === 'Host'); %>
+                <p class="mb-2"><span class="badge <%= isHost ? 'bg-danger' : 'bg-primary' %> rounded-pill px-3"><%= isHost ? 'Host' : 'Traveler' %></span></p>
                 <p class="text-muted small mb-3 px-3"><%= user.bio || 'No bio yet.' %></p>
                 <div class="text-start px-3 small mb-3">
                     <p class="text-muted mb-1"><i class="fa-solid fa-envelope me-2"></i> <%= user.email %></p>
@@ -35,73 +36,130 @@
                 
                 <hr>
                 
-                <h5 class="mb-3 text-start">Edit Profile</h5>
-                <form action="/profile?_method=PUT" method="POST" enctype="multipart/form-data" class="text-start needs-validation" novalidate>
-                    <div class="mb-3">
-                        <label for="username" class="form-label text-muted small fw-bold">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" value="<%= user.username %>" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="role" class="form-label text-muted small fw-bold">Account Type</label>
-                        <select class="form-select" id="role" name="role">
-                            <option value="Traveler" <%= user.role === 'Traveler' ? 'selected' : '' %>>Traveler (Explore & Book)</option>
-                            <option value="Host" <%= user.role === 'Host' ? 'selected' : '' %>>Host (List & Manage Hotels)</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="bio" class="form-label text-muted small fw-bold">Bio</label>
-                        <textarea class="form-control" id="bio" name="bio" rows="2" placeholder="Tell us about yourself..."><%= user.bio %></textarea>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label for="country" class="form-label text-muted small fw-bold">Country</label>
-                            <input type="text" class="form-control" id="country" name="country" value="<%= user.country %>" required>
+                <button id="toggleEditProfileBtn" type="button" class="btn btn-outline-danger w-100 rounded-pill py-2 fw-bold mb-2">
+                    <i class="fa-solid fa-user-pen me-2"></i>Edit Profile
+                </button>
+                
+                <div id="editProfileSection" style="display: none;" class="mt-3 text-start animate__animated animate__fadeIn">
+                    <h5 class="mb-3 fw-bold text-center" style="color: #ff385c;">Edit Profile Details</h5>
+                    <form action="/profile?_method=PUT" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="username" class="form-label text-muted small fw-bold">Username</label>
+                            <input type="text" class="form-control rounded-3" id="username" name="username" value="<%= user.username %>" required>
                         </div>
-                        <div class="col-6">
-                            <label for="phoneNumber" class="form-label text-muted small fw-bold">Phone</label>
-                            <input type="text" class="form-control" id="phoneNumber" name="phoneNumber" value="<%= user.phoneNumber %>" placeholder="+123...">
+                        <div class="mb-3">
+                            <label for="role" class="form-label text-muted small fw-bold">Account Type</label>
+                            <% if (userListings.length > 0) { %>
+                                <input type="text" class="form-control rounded-3 bg-light text-muted" value="Host (Listing Owner)" readonly>
+                                <input type="hidden" name="role" value="Host">
+                                <div class="form-text small text-muted">You own active stay(s), so your profile is automatically set as Host.</div>
+                            <% } else { %>
+                                <select class="form-select rounded-3" id="role" name="role">
+                                    <option value="Traveler" <%= user.role === 'Traveler' ? 'selected' : '' %>>Traveler (Explore & Book)</option>
+                                    <option value="Host" <%= user.role === 'Host' ? 'selected' : '' %>>Host (List & Manage Hotels)</option>
+                                </select>
+                            <% } %>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="languages" class="form-label text-muted small fw-bold">Languages Spoken</label>
-                        <input type="text" class="form-control" id="languages" name="languages" value="<%= user.languages %>" placeholder="e.g. English, Hindi">
-                    </div>
-                    <input type="file" id="profileImage" name="profileImage" accept=".png, .jpg, .jpeg, .webp, image/*" style="display: none;">
-                    <button type="submit" class="btn btn-danger w-100 py-2 fw-bold">Save Changes</button>
-                </form>
+
+                        <div class="mb-3">
+                            <label for="bio" class="form-label text-muted small fw-bold">Bio</label>
+                            <textarea class="form-control rounded-3" id="bio" name="bio" rows="2" placeholder="Tell us about yourself..."><%= user.bio %></textarea>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label for="country" class="form-label text-muted small fw-bold">Country</label>
+                                <input type="text" class="form-control rounded-3" id="country" name="country" value="<%= user.country %>" required>
+                            </div>
+                            <div class="col-6">
+                                <label for="phoneNumber" class="form-label text-muted small fw-bold">Phone</label>
+                                <input type="text" class="form-control rounded-3" id="phoneNumber" name="phoneNumber" value="<%= user.phoneNumber %>" placeholder="+123...">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="languages" class="form-label text-muted small fw-bold">Languages Spoken</label>
+                            <input type="text" class="form-control rounded-3" id="languages" name="languages" value="<%= user.languages %>" placeholder="e.g. English, Hindi">
+                        </div>
+                        <input type="file" id="profileImage" name="profileImage" accept=".png, .jpg, .jpeg, .webp, image/*" style="display: none;">
+                        <button type="submit" class="btn btn-danger w-100 py-2 fw-bold rounded-3" style="background-color: #ff385c; border: none;">Save Changes</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
     
     <div class="col-12 col-md-8">
+        <% if (typeof hostStats !== 'undefined' && userListings.length > 0) { %>
+        <!-- Host Analytics Dashboard Banner (Theme Adaptive) -->
+        <div class="card border shadow-sm rounded-4 mb-4 host-dashboard-card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="fa-solid fa-chart-line me-2 text-danger"></i>Host Performance Dashboard</h5>
+                        <small class="text-muted">Stored Reservation Audit Logs & Analytics</small>
+                    </div>
+                    <span class="badge rounded-pill bg-danger px-3 py-2 fw-bold">Active Host</span>
+                </div>
+                <div class="row g-3 text-center">
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 rounded-3 host-metric-box">
+                            <small class="text-muted d-block mb-1 fw-bold">Total Revenue</small>
+                            <span class="fs-5 fw-bold text-success">₹<%= hostStats.totalEarnings.toLocaleString("en-IN") %></span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 rounded-3 host-metric-box">
+                            <small class="text-muted d-block mb-1 fw-bold">Active Bookings</small>
+                            <span class="fs-5 fw-bold text-warning"><%= hostStats.activeBookings %></span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 rounded-3 host-metric-box">
+                            <small class="text-muted d-block mb-1 fw-bold">Completed Stays</small>
+                            <span class="fs-5 fw-bold text-info"><%= hostStats.completedStays %></span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 rounded-3 host-metric-box">
+                            <small class="text-muted d-block mb-1 fw-bold">Cancelled Trips</small>
+                            <span class="fs-5 fw-bold text-danger"><%= hostStats.cancelledBookings %></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <% } %>
+
         <!-- Tabs for Listings, Wishlist, and Bookings -->
-        <ul class="nav nav-tabs mb-4" id="profileTabs" role="tablist">
+        <ul class="nav nav-tabs mb-4 flex-nowrap overflow-auto" id="profileTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="bookings-tab" data-bs-toggle="tab" data-bs-target="#bookings-tab-pane" type="button" role="tab" aria-controls="bookings-tab-pane" aria-selected="true" style="color: crimson; font-weight: bold;">
                     My Bookings (<%= userBookings.length %>)
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="listings-tab" data-bs-toggle="tab" data-bs-target="#listings-tab-pane" type="button" role="tab" aria-controls="listings-tab-pane" aria-selected="false" style="color: #222;">
+                <button class="nav-link" id="listings-tab" data-bs-toggle="tab" data-bs-target="#listings-tab-pane" type="button" role="tab" aria-controls="listings-tab-pane" aria-selected="false">
                     My Listings (<%= userListings.length %>)
                 </button>
             </li>
+            <% if (typeof hostReservations !== 'undefined' && userListings.length > 0) { %>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="wishlist-tab" data-bs-toggle="tab" data-bs-target="#wishlist-tab-pane" type="button" role="tab" aria-controls="wishlist-tab-pane" aria-selected="false" style="color: #222;">
+                <button class="nav-link" id="host-reservations-tab" data-bs-toggle="tab" data-bs-target="#host-reservations-tab-pane" type="button" role="tab" aria-controls="host-reservations-tab-pane" aria-selected="false" style="color: #ff385c; font-weight: bold;">
+                    <i class="fa-solid fa-bell me-1"></i>Reservations Received (<%= hostReservations.length %>)
+                </button>
+            </li>
+            <% } %>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="wishlist-tab" data-bs-toggle="tab" data-bs-target="#wishlist-tab-pane" type="button" role="tab" aria-controls="wishlist-tab-pane" aria-selected="false">
                     My Wishlist (<%= user.wishlist.length %>)
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews-tab-pane" type="button" role="tab" aria-controls="reviews-tab-pane" aria-selected="false" style="color: #222;">
+                <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews-tab-pane" type="button" role="tab" aria-controls="reviews-tab-pane" aria-selected="false">
                     My Reviews (<%= reviewsWithListings.length %>)
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="messages-tab" data-bs-toggle="tab" data-bs-target="#messages-tab-pane" type="button" role="tab" aria-controls="messages-tab-pane" aria-selected="false" style="color: #222;">
-                    Messages (<%= conversations.length %>)
-                </button>
-            </li>
         </ul>
+
         
         <div class="tab-content" id="profileTabsContent">
             <!-- Bookings Tab -->
@@ -117,21 +175,50 @@
                         <% for(let booking of userBookings) { %>
                             <div class="col">
                                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-row">
-                                    <img src="<%= booking.listing.image.url %>" style="width: 200px; height: 150px; object-fit: cover;">
+                                    <img src="<%= booking.listing ? booking.listing.image.url : '' %>" style="width: 200px; height: 150px; object-fit: cover;">
                                     <div class="card-body p-4 d-flex flex-column justify-content-center">
-                                        <div class="d-flex justify-content-between">
-                                            <h5 class="fw-bold"><%= booking.listing.title %></h5>
-                                            <span class="badge bg-success py-2 px-3">Paid</span>
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h5 class="fw-bold mb-0"><%= booking.listing ? booking.listing.title : 'Property' %></h5>
+                                            <% const isPast = new Date() > new Date(booking.checkOut); %>
+                                            <% if (booking.paymentStatus === 'cancelled') { %>
+                                                <span class="badge bg-danger py-2 px-3"><i class="fa-solid fa-ban me-1"></i>Cancelled</span>
+                                            <% } else if (booking.paymentStatus === 'no_show') { %>
+                                                <span class="badge bg-warning text-dark py-2 px-3"><i class="fa-solid fa-user-slash me-1"></i>No-Show</span>
+                                            <% } else if (isPast || booking.paymentStatus === 'completed') { %>
+                                                <span class="badge bg-primary py-2 px-3"><i class="fa-solid fa-circle-check me-1"></i>Completed Stay</span>
+                                            <% } else { %>
+                                                <span class="badge bg-success py-2 px-3"><i class="fa-solid fa-plane-departure me-1"></i>Confirmed Stay</span>
+                                            <% } %>
                                         </div>
                                         <p class="text-muted mb-1"><i class="fa-solid fa-calendar-days me-2"></i><%= new Date(booking.checkIn).toLocaleDateString() %> — <%= new Date(booking.checkOut).toLocaleDateString() %></p>
                                         <p class="text-muted mb-0"><i class="fa-solid fa-users me-2"></i><%= booking.guests %> Guests</p>
-                                        <div class="mt-2">
-                                            <a href="/listings/<%= booking.listing._id %>" class="btn btn-sm btn-dark">View Listing</a>
+                                        <div class="mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <div>
+                                                <a href="/listings/<%= booking.listing ? booking.listing._id : '' %>" class="btn btn-sm btn-dark rounded-pill px-3 me-2">View Stay</a>
+                                                <% if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'completed' || isPast) { %>
+                                                    <a href="/receipt/<%= booking._id %>" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                                                        <i class="fa-solid fa-file-pdf text-danger me-1"></i>Download PDF Receipt
+                                                    </a>
+                                                <% } %>
+
+
+                                            </div>
+                                            <% if (booking.paymentStatus !== 'cancelled' && !isPast) { %>
+                                                <form method="POST" action="/listings/<%= booking.listing ? booking.listing._id : '' %>/booking/<%= booking._id %>?_method=DELETE" class="d-inline">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Are you sure you want to cancel this reservation?')">
+                                                        <i class="fa-solid fa-xmark me-1"></i>Cancel Trip
+                                                    </button>
+                                                </form>
+                                            <% } %>
+
                                         </div>
+
                                     </div>
                                 </div>
                             </div>
+
                         <% } %>
+
                     </div>
                 <% } %>
             </div>
@@ -169,9 +256,126 @@
                     </div>
                 <% } %>
             </div>
-            
+                     <!-- Host Reservations Received Tab -->
+            <% if (typeof hostReservations !== 'undefined' && userListings.length > 0) { %>
+            <div class="tab-pane fade" id="host-reservations-tab-pane" role="tabpanel" aria-labelledby="host-reservations-tab" tabindex="0">
+                <% if(hostReservations.length === 0) { %>
+                    <div class="text-center mt-5 text-muted">
+                        <i class="fa-solid fa-calendar-xmark mb-3" style="font-size: 3rem; color: #ccc;"></i>
+                        <h5>No reservations received yet for your listings.</h5>
+                        <p class="small text-muted">When travelers book your stays, their booking details will appear here!</p>
+                    </div>
+                <% } else { %>
+                    <div class="row row-cols-1 g-4">
+                        <% for(let booking of hostReservations) { %>
+                            <div class="col">
+                                <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-row">
+                                    <img src="<%= booking.listing ? booking.listing.image.url : '' %>" style="width: 200px; height: 150px; object-fit: cover;">
+                                    <div class="card-body p-4 d-flex flex-column justify-content-center">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h5 class="fw-bold mb-0"><%= booking.listing ? booking.listing.title : 'Property' %></h5>
+                                            <% const isHostPast = new Date() > new Date(booking.checkOut); %>
+                                            <% if (booking.paymentStatus === 'cancelled') { %>
+                                                <span class="badge bg-secondary py-2 px-3"><i class="fa-solid fa-circle-xmark me-1"></i>Cancelled by Guest</span>
+                                            <% } else if (booking.paymentStatus === 'no_show') { %>
+                                                <span class="badge bg-warning text-dark py-2 px-3"><i class="fa-solid fa-user-slash me-1"></i>No-Show</span>
+                                            <% } else if (isHostPast || booking.paymentStatus === 'completed') { %>
+                                                <span class="badge bg-primary py-2 px-3"><i class="fa-solid fa-circle-check me-1"></i>Completed Stay</span>
+                                            <% } else { %>
+                                                <span class="badge bg-success py-2 px-3"><i class="fa-solid fa-circle-check me-1"></i>Confirmed / Upcoming</span>
+                                            <% } %>
+                                        </div>
+
+                                        <p class="mb-1 text-muted"><i class="fa-solid fa-user me-2 text-danger"></i>Guest: <strong>@<%= booking.user ? booking.user.username : 'Guest' %></strong> (<%= booking.user ? booking.user.email : '' %>)</p>
+                                        <p class="text-muted mb-1"><i class="fa-solid fa-calendar-days me-2"></i>Dates: <%= new Date(booking.checkIn).toLocaleDateString() %> — <%= new Date(booking.checkOut).toLocaleDateString() %> (<%= booking.guests %> Guests)</p>
+                                        <div class="mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <span class="fw-bold text-success fs-5">Host Revenue: ₹<%= booking.totalPrice ? booking.totalPrice.toLocaleString("en-IN") : '0' %></span>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#hostModal_<%= booking._id %>">
+                                                    <i class="fa-solid fa-circle-info me-1"></i>Guest Details
+                                                </button>
+                                                <% if (booking.user) { %>
+                                                <a href="/messages?receiverId=<%= booking.user._id %>&listingId=<%= booking.listing ? booking.listing._id : '' %>" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold">
+                                                    <i class="fa-regular fa-comment-dots me-1"></i>Message Guest
+                                                </a>
+                                                <% } %>
+                                            </div>
+                                        </div>
+
+                                        <!-- Host Detailed Guest Modal -->
+                                        <div class="modal fade" id="hostModal_<%= booking._id %>" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content rounded-4 border-0 shadow-lg">
+                                                    <div class="modal-header border-bottom p-4" style="background: linear-gradient(135deg, #ff385c, #e03150); color: white;">
+                                                        <h5 class="modal-title fw-bold text-white mb-0"><i class="fa-solid fa-id-card me-2"></i>Reservation & Guest Details</h5>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body p-4">
+                                                        <!-- Guest Card Info -->
+                                                        <div class="d-flex align-items-center mb-4 p-3 rounded-3 bg-light">
+                                                            <% if (booking.user && booking.user.profileImage && booking.user.profileImage.url) { %>
+                                                                <img src="<%= booking.user.profileImage.url %>" class="rounded-circle me-3" style="width: 55px; height: 55px; object-fit: cover;">
+                                                            <% } else { %>
+                                                                <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center me-3 fw-bold fs-4" style="width: 55px; height: 55px;">
+                                                                    <%= booking.user ? booking.user.username.charAt(0).toUpperCase() : 'G' %>
+                                                                </div>
+                                                            <% } %>
+                                                            <div>
+                                                                <h5 class="fw-bold mb-0">@<%= booking.user ? booking.user.username : 'Guest' %></h5>
+                                                                <small class="text-muted"><%= booking.user ? booking.user.email : 'No email' %></small>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="row g-3 small">
+                                                            <div class="col-6">
+                                                                <p class="text-muted mb-1 fw-bold">Guest Location</p>
+                                                                <p class="fw-semibold mb-0"><i class="fa-solid fa-location-dot me-1 text-danger"></i><%= (booking.user && booking.user.country) ? booking.user.country : 'Not specified' %></p>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <p class="text-muted mb-1 fw-bold">Phone Contact</p>
+                                                                <p class="fw-semibold mb-0"><i class="fa-solid fa-phone me-1 text-success"></i><%= (booking.user && booking.user.phoneNumber) ? booking.user.phoneNumber : 'Not provided' %></p>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <p class="text-muted mb-1 fw-bold">Guest Bio</p>
+                                                                <p class="fw-semibold mb-0 text-muted"><%= (booking.user && booking.user.bio) ? booking.user.bio : 'No bio provided.' %></p>
+                                                            </div>
+                                                        </div>
+
+                                                        <hr class="my-3">
+
+                                                        <!-- Stay Info -->
+                                                        <h6 class="fw-bold mb-3 text-danger"><i class="fa-solid fa-house me-2"></i>Stay Information</h6>
+                                                        <div class="p-3 rounded-3 bg-light small">
+                                                            <p class="mb-1"><strong>Property:</strong> <%= booking.listing ? booking.listing.title : 'Stay' %> (<%= booking.listing ? booking.listing.location : '' %>)</p>
+                                                            <p class="mb-1"><strong>Check-In:</strong> <%= new Date(booking.checkIn).toDateString() %></p>
+                                                            <p class="mb-1"><strong>Check-Out:</strong> <%= new Date(booking.checkOut).toDateString() %></p>
+                                                            <p class="mb-1"><strong>Guest Count:</strong> <%= booking.guests %> Guests</p>
+                                                            <p class="mb-0 text-success fw-bold"><strong>Total Payout:</strong> ₹<%= booking.totalPrice ? booking.totalPrice.toLocaleString("en-IN") : '0' %></p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer border-top p-3">
+                                                        <% if (booking.user) { %>
+                                                        <a href="/messages?receiverId=<%= booking.user._id %>&listingId=<%= booking.listing ? booking.listing._id : '' %>" class="btn btn-danger rounded-pill px-4 fw-bold w-100" style="background: linear-gradient(135deg, #ff385c, #e03150); border: none;">
+                                                            <i class="fa-regular fa-comment-dots me-2"></i>Open Chat with @<%= booking.user.username %>
+                                                        </a>
+                                                        <% } %>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <% } %>
+                    </div>
+                <% } %>
+            </div>
+            <% } %>
+
             <!-- Wishlist Tab -->
+
             <div class="tab-pane fade" id="wishlist-tab-pane" role="tabpanel" aria-labelledby="wishlist-tab" tabindex="0">
+
                 <% if(user.wishlist.length === 0) { %>
                     <div class="text-center mt-5 text-muted">
                         <i class="fa-solid fa-heart mb-3" style="font-size: 3rem; color: #ccc;"></i>
@@ -351,4 +555,93 @@ function toggleReview(link) {
             }
         });
     });
+
+    // Toggle Edit Profile Section Visibility
+    const toggleEditBtn = document.getElementById('toggleEditProfileBtn');
+    const editSection = document.getElementById('editProfileSection');
+    if (toggleEditBtn && editSection) {
+        toggleEditBtn.addEventListener('click', () => {
+            const isHidden = editSection.style.display === 'none';
+            editSection.style.display = isHidden ? 'block' : 'none';
+            toggleEditBtn.innerHTML = isHidden 
+                ? '<i class="fa-solid fa-xmark me-2"></i>Close Edit' 
+                : '<i class="fa-solid fa-user-pen me-2"></i>Edit Profile';
+            if (isHidden) {
+                toggleEditBtn.classList.replace('btn-outline-danger', 'btn-secondary');
+            } else {
+                toggleEditBtn.classList.replace('btn-secondary', 'btn-outline-danger');
+            }
+        });
+// Reliable Instant PDF / Print Receipt Generator
+function downloadPdfReceipt(bookingId) {
+    const element = document.getElementById(`pdf-receipt-${bookingId}`);
+    if (!element) {
+        console.error("Receipt element not found for booking ID:", bookingId);
+        return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=850,height=900');
+    if (!printWindow) {
+        alert("Pop-up blocker is preventing receipt window. Please allow pop-ups for localhost.");
+        return;
+    }
+
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>WanderLust_Receipt_${bookingId.substring(18)}</title>
+            <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+            <style>
+                body {
+                    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+                    background: #f8f9fa;
+                    padding: 40px;
+                    margin: 0;
+                    display: flex;
+                    justify-content: center;
+                    color: #222222;
+                }
+                .invoice-card {
+                    background: #ffffff;
+                    width: 700px;
+                    padding: 40px;
+                    border-radius: 16px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+                    border: 1px solid #e0e0e0;
+                }
+                @media print {
+                    body { background: #ffffff; padding: 0; }
+                    .invoice-card { box-shadow: none; border: none; width: 100%; padding: 0; }
+                    .no-print { display: none !important; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="invoice-card">
+                ${element.innerHTML}
+                <div class="no-print" style="margin-top: 35px; text-align: center; border-top: 1px solid #eeeeee; padding-top: 20px;">
+                    <button onclick="window.print()" style="background: linear-gradient(135deg, #ff385c, #e03150); color: white; border: none; padding: 12px 30px; border-radius: 30px; font-weight: 700; font-size: 15px; cursor: pointer; font-family: inherit; margin-right: 10px;">
+                        📄 Save as PDF / Print
+                    </button>
+                    <button onclick="window.close()" style="background: #e4e6eb; color: #333333; border: none; padding: 12px 24px; border-radius: 30px; font-weight: 600; font-size: 15px; cursor: pointer; font-family: inherit;">
+                        Close Window
+                    </button>
+                </div>
+            </div>
+            <script>
+                window.onload = function() {
+                    setTimeout(() => {
+                        window.print();
+                    }, 400);
+                };
+            </script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
 </script>
+
+
+

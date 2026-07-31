@@ -175,9 +175,10 @@ body {
 }
 .filter {
     text-align: center;
-    margin-right: 2rem;
+    margin-right: 0;
     opacity: 0.6;
     padding: 0.8rem 0;
+
     border-bottom: 3px solid transparent;
     transition: all 0.3s ease;
     min-width: max-content;
@@ -264,22 +265,93 @@ body {
     z-index: 10;
 }
 .wishlist-btn {
-    background: rgba(255,255,255,0.85);
+    background: rgba(255, 255, 255, 0.9);
     border: none;
     border-radius: 50%;
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 1.1rem;
-    transition: transform 0.2s, background 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    font-size: 1.15rem;
+    color: #222;
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 .wishlist-btn:hover {
     transform: scale(1.15);
-    background: #fff;
+    background: #ffffff;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+.wishlist-btn .fa-regular.fa-heart {
+    color: #222;
+}
+
+/* Auth Card & Input Styling */
+.auth-card {
+    border-radius: 1.5rem !important;
+    backdrop-filter: blur(10px);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.auth-header-icon {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(255, 56, 92, 0.15), rgba(224, 49, 80, 0.25));
+    color: #ff385c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin: 0 auto 1rem auto;
+}
+.auth-input-group {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.auth-input-group .input-group-text {
+    background-color: transparent;
+    border-right: none;
+    color: #6c757d;
+    padding-left: 1.1rem;
+}
+.auth-input-group .form-control {
+    border-left: none;
+    padding: 0.75rem 1rem;
+    font-size: 0.98rem;
+}
+.auth-input-group .form-control:focus {
+    box-shadow: none;
+}
+.auth-input-group:focus-within {
+    border-color: #ff385c !important;
+    box-shadow: 0 0 0 0.25rem rgba(255, 56, 92, 0.25) !important;
+}
+.auth-btn-submit {
+    background: linear-gradient(135deg, #ff385c, #e03150);
+    border: none;
+    color: white;
+    font-weight: 700;
+    padding: 0.85rem;
+    border-radius: 0.75rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.auth-btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 56, 92, 0.4);
+    color: white;
+}
+.toggle-password-btn {
+    border-left: none;
+    background: transparent;
+    color: #6c757d;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.toggle-password-btn:hover {
+    color: #ff385c;
 }
 
 /* Flash Alert Transitions */
@@ -342,6 +414,166 @@ body {
 [data-bs-theme="dark"] .text-secondary {
     color: #ced4da !important;
 }
+[data-bs-theme="dark"] .wishlist-btn {
+    background: rgba(33, 37, 41, 0.85);
+    color: #f8f9fa;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+[data-bs-theme="dark"] .wishlist-btn:hover {
+    background: #2b3035;
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+}
+[data-bs-theme="dark"] .wishlist-btn .fa-regular.fa-heart {
+    color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .auth-header-icon {
+    background: linear-gradient(135deg, rgba(255, 56, 92, 0.25), rgba(224, 49, 80, 0.35));
+    color: #ff5a79;
+}
+[data-bs-theme="dark"] .auth-input-group .input-group-text,
+[data-bs-theme="dark"] .toggle-password-btn {
+    color: #adb5bd;
+}
+
+/* Dark Mode Chat & Inputs Color Fix */
+[data-bs-theme="dark"] input.form-control,
+[data-bs-theme="dark"] textarea.form-control,
+[data-bs-theme="dark"] select.form-select,
+[data-bs-theme="dark"] #chatInput,
+[data-bs-theme="dark"] #inboxChatInput,
+[data-bs-theme="dark"] .floating-chat-input {
+    background-color: #2b3035 !important;
+    color: #f8f9fa !important;
+    border-color: #495057 !important;
+}
+
+[data-bs-theme="dark"] input.form-control::placeholder,
+[data-bs-theme="dark"] textarea.form-control::placeholder,
+[data-bs-theme="dark"] #chatInput::placeholder,
+[data-bs-theme="dark"] #inboxChatInput::placeholder,
+[data-bs-theme="dark"] .floating-chat-input::placeholder {
+    color: #adb5bd !important;
+}
+
+[data-bs-theme="dark"] .modal-content,
+[data-bs-theme="dark"] #chatMessages,
+[data-bs-theme="dark"] #messagesDisplay,
+[data-bs-theme="dark"] .floating-chat-card {
+    background-color: #1e2227 !important;
+    color: #f8f9fa !important;
+    border-color: #343a40 !important;
+}
+
+[data-bs-theme="dark"] .modal-header,
+[data-bs-theme="dark"] .modal-footer,
+[data-bs-theme="dark"] .floating-chat-header,
+[data-bs-theme="dark"] .floating-chat-footer {
+    background-color: #212529 !important;
+    border-color: #343a40 !important;
+    color: #f8f9fa !important;
+}
+
+/* Floating Chat Widget */
+.floating-chat-fab {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff385c, #e03150);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 9990;
+    box-shadow: 0 8px 24px rgba(255, 56, 92, 0.4);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.floating-chat-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 30px rgba(255, 56, 92, 0.55);
+}
+
+.floating-booking-fab {
+    position: fixed;
+    bottom: 95px;
+    right: 25px;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4f46e5, #3730a3);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 9990;
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.floating-booking-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 30px rgba(79, 70, 229, 0.55);
+}
+
+/* Host Dashboard Card Theme Adaptation */
+.host-dashboard-card {
+    background-color: #ffffff;
+    color: #212529;
+    border-color: #e0e0e0;
+}
+.host-metric-box {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+[data-bs-theme="dark"] .host-dashboard-card {
+    background-color: #1e2227 !important;
+    color: #f8f9fa !important;
+    border-color: #343a40 !important;
+}
+[data-bs-theme="dark"] .host-metric-box {
+    background-color: #2b3035 !important;
+    border-color: #495057 !important;
+}
+
+/* Main Content Spacing & Smooth Booking Logs */
+.main-content-container {
+    min-height: calc(100vh - 280px);
+    margin-top: 1.5rem !important;
+    margin-bottom: 2.5rem !important;
+    padding-bottom: 2rem !important;
+    overflow-x: hidden;
+}
+
+.scrollable-booking-logs {
+    width: 100%;
+}
+
+
+
+
+.floating-chat-card {
+    position: fixed;
+    bottom: 95px;
+    right: 25px;
+    width: 360px;
+    max-width: calc(100vw - 40px);
+    height: 480px;
+    max-height: calc(100vh - 120px);
+    border-radius: 1.25rem;
+    z-index: 9995;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+}
+
+
 
 /* Airbnb Review Style */
 .review-airbnb-card {
@@ -392,4 +624,29 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+/* Interactive Modern Star Rating Picker */
+.star-picker-icon {
+    font-size: 1.7rem;
+    color: #d1d5db;
+    cursor: pointer;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.star-picker-icon:hover {
+    transform: scale(1.2);
+}
+
+.star-picker-icon.active {
+    color: #ffb400;
+    text-shadow: 0 0 10px rgba(255, 180, 0, 0.4);
+}
+
+[data-bs-theme="dark"] .star-picker-icon {
+    color: #4b5563;
+}
+
+[data-bs-theme="dark"] .star-picker-icon.active {
+    color: #ffc107;
 }

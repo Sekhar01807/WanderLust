@@ -5,8 +5,10 @@ const Review = require("./review.js");
 const CATEGORIES = [
     "trending", "rooms", "cities", "pools", "hills",
     "star_hotels", "private_house", "best_deals",
-    "premium", "nearby", "others"
+    "premium", "nearby", "beachfront", "camping",
+    "castles", "arctic", "others"
 ];
+
 
 const listingSchema = new mongoose.Schema({
     title: {
@@ -56,8 +58,15 @@ const listingSchema = new mongoose.Schema({
             type: [Number],
             required: true
         }
+    },
+    isVerified: {
+        type: Boolean,
+        default: false
     }
 });
+
+
+
 
 listingSchema.post("findOneAndDelete", async (listing) => {
     if (listing) {

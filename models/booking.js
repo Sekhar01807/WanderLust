@@ -30,9 +30,11 @@ const bookingSchema = new Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ["pending", "paid", "failed"],
+        enum: ["pending", "paid", "failed", "cancelled", "completed", "no_show"],
         default: "pending"
     },
+
+
     stripeSessionId: String,
     createdAt: {
         type: Date,

@@ -1,0 +1,40 @@
+<% if (typeof currUser !== 'undefined' && currUser) { %>
+<!-- Floating Chat & Messages Shortcut Button -->
+<a href="/messages" id="floatingChatFab" class="floating-chat-fab text-decoration-none" title="Messages & Chat">
+    <i class="fa-solid fa-comments fs-4 text-white"></i>
+    <span id="floatingChatBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light shadow-sm d-none" style="font-size: 0.75rem; padding: 0.35em 0.6em;">
+        0
+    </span>
+</a>
+
+<script>
+(() => {
+    const badge = document.getElementById('floatingChatBadge');
+    if (!badge) return;
+
+    async function checkUnreadCount() {
+        try {
+            const res = await fetch('/notifications/summary');
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            if (data.success && data.alerts) {
+                const unreadMsgCount = data.alerts.filter(a => a.type === 'message').length;
+                if (unreadMsgCount > 0) {
+                    badge.textContent = unreadMsgCount > 9 ? '9+' : unreadMsgCount;
+                    badge.classList.remove('d-none');
+                } else {
+                    badge.classList.add('d-none');
+                }
+            }
+        } catch (err) {
+            console.error('Failed to check unread messages count', err);
+        }
+    }
+
+    checkUnreadCount();
+    // Refresh unread count every 30 seconds
+    setInterval(checkUnreadCount, 30000);
+})();
+</script>
+<% } %>
