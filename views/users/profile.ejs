@@ -572,6 +572,8 @@ function toggleReview(link) {
                 toggleEditBtn.classList.replace('btn-secondary', 'btn-outline-danger');
             }
         });
+    }
+
 // Reliable Instant PDF / Print Receipt Generator
 function downloadPdfReceipt(bookingId) {
     const element = document.getElementById(`pdf-receipt-${bookingId}`);
@@ -629,13 +631,13 @@ function downloadPdfReceipt(bookingId) {
                     </button>
                 </div>
             </div>
-            <script>
+            <` + `script>
                 window.onload = function() {
                     setTimeout(() => {
                         window.print();
                     }, 400);
                 };
-            </script>
+            <` + `/script>
         </body>
         </html>
     `);
