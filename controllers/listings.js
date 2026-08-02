@@ -7,6 +7,10 @@ module.exports.index = async (req, res) => {
     const { category, search } = req.query;
     let filter = {};
 
+    if (req.user) {
+        filter.owner = { $ne: req.user._id };
+    }
+
     if (category && category !== "all") {
         filter.category = category;
     }
