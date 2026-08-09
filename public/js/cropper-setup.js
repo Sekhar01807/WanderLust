@@ -53,6 +53,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     };
                     reader.readAsDataURL(blob);
                 }
+
+                // Auto expand profile edit section if profile image was updated
+                if (currentFileInput && currentFileInput.id === 'profileImage') {
+                    const editSection = document.getElementById('editProfileSection');
+                    const toggleBtn = document.getElementById('toggleEditProfileBtn');
+                    if (editSection && editSection.style.display === 'none') {
+                        editSection.style.display = 'block';
+                        if (toggleBtn) {
+                            toggleBtn.innerHTML = '<i class="fa-solid fa-xmark me-2"></i>Close Edit';
+                            toggleBtn.classList.replace('btn-outline-danger', 'btn-secondary');
+                        }
+                    }
+                }
                 
                 cropperModal.hide();
             }, 'image/jpeg', 0.9);

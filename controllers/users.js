@@ -127,10 +127,16 @@ module.exports.showProfile = async (req, res) => {
         await user.save();
     }
 
-    
     const Booking = require("../models/booking");
-    const userBookings = await Booking.find({ user: req.user._id }).populate("listing").sort({ createdAt: -1 });
+    const now = new Date();
 
+    // Automatically mark out-of-date bookings as cancelled in real-time
+    await Booking.updateMany(
+        { checkOut: { $lt: now }, paymentStatus: { $ne: "cancelled" } },
+        { $set: { paymentStatus: "cancelled" } }
+    );
+
+    const userBookings = await Booking.find({ user: req.user._id }).populate("listing").sort({ createdAt: -1 });
 
     // Fetch ALL incoming reservations & audit logs for stays owned by this Host
     const hostListingIds = userListings.map(l => l._id);
@@ -138,17 +144,16 @@ module.exports.showProfile = async (req, res) => {
         listing: { $in: hostListingIds }
     }).populate("user listing").sort({ createdAt: -1 });
 
-
-    // Compute Host Analytics & Reservation Audit Logs
+    // Compute Host Analytics & Reservation Audit Logs in Real Time
     let hostTotalEarnings = 0;
     let hostActiveBookings = 0;
     let hostCancelledBookings = 0;
     let hostCompletedStays = 0;
 
     hostReservations.forEach(b => {
-        if (b.paymentStatus === 'paid') {
+        if (b.paymentStatus === 'paid' || b.paymentStatus === 'completed') {
             hostTotalEarnings += (b.totalPrice || 0);
-            if (new Date() > new Date(b.checkOut)) {
+            if (now > new Date(b.checkOut)) {
                 hostCompletedStays++;
             } else {
                 hostActiveBookings++;
@@ -182,15 +187,17 @@ module.exports.showProfile = async (req, res) => {
     const conversations = [];
     const seenConvos = new Set();
     for (let msg of userMessages) {
-        const otherUser = msg.sender._id.equals(req.user._id) ? msg.receiver : msg.sender;
-        const convoId = `${msg.listing._id}_${otherUser._id}`;
-        if (!seenConvos.has(convoId)) {
-            seenConvos.add(convoId);
-            conversations.push({
-                lastMessage: msg,
-                otherUser,
-                listing: msg.listing
-            });
+        if (msg.sender && msg.receiver && msg.listing) {
+            const otherUser = msg.sender._id.equals(req.user._id) ? msg.receiver : msg.sender;
+            const convoId = `${msg.listing._id}_${otherUser._id}`;
+            if (!seenConvos.has(convoId)) {
+                seenConvos.add(convoId);
+                conversations.push({
+                    lastMessage: msg,
+                    otherUser,
+                    listing: msg.listing
+                });
+            }
         }
     }
     

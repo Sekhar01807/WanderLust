@@ -111,16 +111,25 @@ module.exports.editListing = async (req, res) => {
 
 module.exports.updateListing = async (req, res) => {
     let { id } = req.params;
-    let listing = await Listing.findByIdAndUpdate(id, { ...req.body.listing });
+    let listing = await Listing.findById(id);
+    if (!listing) {
+        req.flash("error", "Listing you requested for does not exist!");
+        return res.redirect("/listings");
+    }
 
-    if (typeof req.files['listing[image]'] !== "undefined") {
+    if (req.body.listing) {
+        listing.set(req.body.listing);
+    }
+
+    if (req.files && req.files['listing[image]'] && req.files['listing[image]'].length > 0) {
         let url = req.files['listing[image]'][0].path;
         let filename = req.files['listing[image]'][0].filename;
         listing.image = { url, filename };
     }
 
-    if (typeof req.files['listing[images]'] !== "undefined") {
+    if (req.files && req.files['listing[images]'] && req.files['listing[images]'].length > 0) {
         const newImages = req.files['listing[images]'].map(f => ({ url: f.path, filename: f.filename }));
+        if (!listing.images) listing.images = [];
         listing.images.push(...newImages);
     }
 
