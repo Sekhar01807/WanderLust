@@ -222,7 +222,7 @@ app.use("/", userRouter);
 
 
 
-app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.get('/favicon.ico', (req, res) => res.redirect('/favicon.svg'));
 app.get(/^\/\.well-known\/.*/, (req, res) => res.status(204).end());
 
 app.all(/(.*)/, (req, res, next) => {
