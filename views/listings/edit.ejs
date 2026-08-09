@@ -20,17 +20,16 @@
                     <div class="invalid-feedback"> Description is Empty</div>
                 </div>
                 <div class="mb-4">
-                    <label for="listingImage" class="form-label fw-bold">Main Listing Image</label>
-                    <div class="position-relative d-block w-100 mb-2" style="cursor: pointer; border-radius: 1rem; overflow: hidden;" onclick="document.getElementById('listingImage').click();">
+                    <label class="form-label fw-bold">Main Listing Image</label>
+                    <label for="listingImage" class="position-relative d-block w-100 mb-2 listing-img-container" style="cursor: pointer; border-radius: 1rem; overflow: hidden;">
                         <img id="listing-preview" src="<%= typeof originalImageUrl !== 'undefined' ? originalImageUrl : (listing.image ? listing.image.url : '') %>" class="img-fluid" style="width: 100%; height: 300px; object-fit: cover;">
                         <!-- Hover Edit Overlay -->
-                        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center listing-overlay" style="background: rgba(0,0,0,0.5); opacity: 0; transition: 0.2s;">
+                        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center listing-overlay">
                             <i class="fa-solid fa-camera text-white mb-2" style="font-size: 3rem;"></i>
-                            <span class="text-white fw-bold fs-5">Click to Change Main Photo</span>
+                            <span class="text-white fw-bold fs-5">Change Main Photo</span>
                         </div>
-                    </div>
-                    <input type="file" id="listingImage" name="listing[image]" class="form-control" accept=".png, .jpg, .jpeg, .webp, image/*">
-                    <small class="text-muted"><i class="fa-solid fa-circle-info me-1"></i>Click the image above or choose a file to update main photo.</small>
+                    </label>
+                    <input type="file" id="listingImage" name="listing[image]" accept=".png, .jpg, .jpeg, .webp, image/*" class="d-none">
                 </div>
 
                 <div class="mb-4">
@@ -91,6 +90,17 @@
         </div>
     </div>
 
+<style>
+.listing-overlay {
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+.listing-img-container:hover .listing-overlay {
+    opacity: 1 !important;
+}
+</style>
+
 <script>
 // Setup Cropper for Listing Image (Aspect ratio 16:9)
 document.addEventListener("DOMContentLoaded", () => {
@@ -98,12 +108,4 @@ document.addEventListener("DOMContentLoaded", () => {
         setupImageCropper('listingImage', 'listing-preview', 16/9);
     }
 });
-
-// Overlay Hover Effect
-const listingContainer = document.querySelector('.position-relative.d-block.w-100');
-const listingOverlay = document.querySelector('.listing-overlay');
-if (listingContainer && listingOverlay) {
-    listingContainer.addEventListener('mouseover', () => { listingOverlay.style.opacity = '1'; });
-    listingContainer.addEventListener('mouseout', () => { listingOverlay.style.opacity = '0'; });
-}
 </script>
