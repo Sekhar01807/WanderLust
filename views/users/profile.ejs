@@ -190,8 +190,8 @@
                                                 <span class="badge bg-success py-2 px-3"><i class="fa-solid fa-plane-departure me-1"></i>Confirmed Stay</span>
                                             <% } %>
                                         </div>
-                                        <p class="text-muted mb-1"><i class="fa-solid fa-calendar-days me-2"></i><%= new Date(booking.checkIn).toLocaleDateString() %> — <%= new Date(booking.checkOut).toLocaleDateString() %></p>
-                                        <p class="text-muted mb-0"><i class="fa-solid fa-users me-2"></i><%= booking.guests %> Guests</p>
+                                        <p class="text-muted mb-1 small"><i class="fa-solid fa-calendar-days me-2 text-danger"></i><strong>Dates:</strong> <%= new Date(booking.checkIn).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) %> &rarr; <%= new Date(booking.checkOut).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) %></p>
+                                        <p class="text-muted mb-0 small"><i class="fa-solid fa-users me-2 text-primary"></i><strong>Guests:</strong> <%= booking.guests %> Guests</p>
                                         <div class="mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
                                             <div>
                                                 <a href="/listings/<%= booking.listing ? booking.listing._id : '' %>" class="btn btn-sm btn-dark rounded-pill px-3 me-2">View Stay</a>
@@ -287,7 +287,7 @@
                                         </div>
 
                                         <p class="mb-1 text-muted"><i class="fa-solid fa-user me-2 text-danger"></i>Guest: <strong>@<%= booking.user ? booking.user.username : 'Guest' %></strong> (<%= booking.user ? booking.user.email : '' %>)</p>
-                                        <p class="text-muted mb-1"><i class="fa-solid fa-calendar-days me-2"></i>Dates: <%= new Date(booking.checkIn).toLocaleDateString() %> — <%= new Date(booking.checkOut).toLocaleDateString() %> (<%= booking.guests %> Guests)</p>
+                                        <p class="text-muted mb-1 small"><i class="fa-solid fa-calendar-days me-2 text-danger"></i><strong>Dates:</strong> <%= new Date(booking.checkIn).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) %> &rarr; <%= new Date(booking.checkOut).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) %> &bull; <i class="fa-solid fa-users me-1 ms-1 text-primary"></i><strong>Guests:</strong> <%= booking.guests %> Guests</p>
                                         <div class="mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
                                             <span class="fw-bold text-success fs-5">Host Revenue: ₹<%= booking.totalPrice ? booking.totalPrice.toLocaleString("en-IN") : '0' %></span>
                                             <div class="d-flex gap-2">
@@ -312,45 +312,88 @@
                                                     </div>
                                                     <div class="modal-body p-4">
                                                         <!-- Guest Card Info -->
-                                                        <div class="d-flex align-items-center mb-4 p-3 rounded-3 bg-light">
+                                                        <div class="d-flex align-items-center mb-3 p-3 rounded-4 bg-light border border-light-subtle shadow-sm">
                                                             <% if (booking.user && booking.user.profileImage && booking.user.profileImage.url) { %>
-                                                                <img src="<%= booking.user.profileImage.url %>" class="rounded-circle me-3" style="width: 55px; height: 55px; object-fit: cover;">
+                                                                <img src="<%= booking.user.profileImage.url %>" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover; border: 2px solid #ff385c;">
                                                             <% } else { %>
-                                                                <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center me-3 fw-bold fs-4" style="width: 55px; height: 55px;">
+                                                                <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center me-3 fw-bold fs-4" style="width: 50px; height: 50px;">
                                                                     <%= booking.user ? booking.user.username.charAt(0).toUpperCase() : 'G' %>
                                                                 </div>
                                                             <% } %>
                                                             <div>
-                                                                <h5 class="fw-bold mb-0">@<%= booking.user ? booking.user.username : 'Guest' %></h5>
-                                                                <small class="text-muted"><%= booking.user ? booking.user.email : 'No email' %></small>
+                                                                <h6 class="fw-bold mb-0 text-dark">@<%= booking.user ? booking.user.username : 'Guest' %></h6>
+                                                                <small class="text-muted"><i class="fa-solid fa-envelope me-1 text-danger"></i><%= booking.user ? booking.user.email : 'No email' %></small>
                                                             </div>
                                                         </div>
 
-                                                        <div class="row g-3 small">
+                                                        <div class="row g-2 mb-3">
                                                             <div class="col-6">
-                                                                <p class="text-muted mb-1 fw-bold">Guest Location</p>
-                                                                <p class="fw-semibold mb-0"><i class="fa-solid fa-location-dot me-1 text-danger"></i><%= (booking.user && booking.user.country) ? booking.user.country : 'Not specified' %></p>
+                                                                <div class="p-2.5 rounded-3 bg-white border shadow-sm h-100">
+                                                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">Location</small>
+                                                                    <span class="fw-semibold text-dark small"><i class="fa-solid fa-location-dot me-1 text-danger"></i><%= (booking.user && booking.user.country) ? booking.user.country : 'Not specified' %></span>
+                                                                </div>
                                                             </div>
                                                             <div class="col-6">
-                                                                <p class="text-muted mb-1 fw-bold">Phone Contact</p>
-                                                                <p class="fw-semibold mb-0"><i class="fa-solid fa-phone me-1 text-success"></i><%= (booking.user && booking.user.phoneNumber) ? booking.user.phoneNumber : 'Not provided' %></p>
+                                                                <div class="p-2.5 rounded-3 bg-white border shadow-sm h-100">
+                                                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">Phone</small>
+                                                                    <span class="fw-semibold text-dark small"><i class="fa-solid fa-phone me-1 text-success"></i><%= (booking.user && booking.user.phoneNumber) ? booking.user.phoneNumber : 'Not provided' %></span>
+                                                                </div>
                                                             </div>
+                                                            <% if (booking.user && booking.user.bio) { %>
                                                             <div class="col-12">
-                                                                <p class="text-muted mb-1 fw-bold">Guest Bio</p>
-                                                                <p class="fw-semibold mb-0 text-muted"><%= (booking.user && booking.user.bio) ? booking.user.bio : 'No bio provided.' %></p>
+                                                                <div class="p-2.5 rounded-3 bg-white border shadow-sm">
+                                                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">Guest Bio</small>
+                                                                    <span class="text-muted small"><%= booking.user.bio %></span>
+                                                                </div>
                                                             </div>
+                                                            <% } %>
                                                         </div>
 
-                                                        <hr class="my-3">
+                                                        <!-- Stay Information Container -->
+                                                        <div class="d-flex align-items-center mb-2 mt-4">
+                                                            <div class="rounded-circle bg-danger-subtle text-danger d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px;">
+                                                                <i class="fa-solid fa-house fs-6"></i>
+                                                            </div>
+                                                            <h6 class="fw-bold mb-0 text-danger" style="font-size: 0.95rem;">Stay Information</h6>
+                                                        </div>
 
-                                                        <!-- Stay Info -->
-                                                        <h6 class="fw-bold mb-3 text-danger"><i class="fa-solid fa-house me-2"></i>Stay Information</h6>
-                                                        <div class="p-3 rounded-3 bg-light small">
-                                                            <p class="mb-1"><strong>Property:</strong> <%= booking.listing ? booking.listing.title : 'Stay' %> (<%= booking.listing ? booking.listing.location : '' %>)</p>
-                                                            <p class="mb-1"><strong>Check-In:</strong> <%= new Date(booking.checkIn).toDateString() %></p>
-                                                            <p class="mb-1"><strong>Check-Out:</strong> <%= new Date(booking.checkOut).toDateString() %></p>
-                                                            <p class="mb-1"><strong>Guest Count:</strong> <%= booking.guests %> Guests</p>
-                                                            <p class="mb-0 text-success fw-bold"><strong>Total Payout:</strong> ₹<%= booking.totalPrice ? booking.totalPrice.toLocaleString("en-IN") : '0' %></p>
+                                                        <div class="p-3 rounded-4 bg-light border border-light-subtle shadow-sm">
+                                                            <!-- Property Title & Location -->
+                                                            <div class="mb-3 pb-2 border-bottom">
+                                                                <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">Property</small>
+                                                                <div class="fw-bold text-dark fs-6"><i class="fa-solid fa-hotel me-2 text-danger"></i><%= booking.listing ? booking.listing.title : 'Stay' %></div>
+                                                                <small class="text-muted ms-4"><i class="fa-solid fa-location-dot me-1"></i><%= booking.listing ? booking.listing.location : '' %></small>
+                                                            </div>
+
+                                                            <!-- Check-In / Check-Out Grid -->
+                                                            <div class="row g-2 mb-3 pb-2 border-bottom">
+                                                                <div class="col-6">
+                                                                    <div class="p-2 rounded-3 bg-white border shadow-sm">
+                                                                        <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;"><i class="fa-solid fa-calendar-check text-success me-1"></i>Check-In</small>
+                                                                        <span class="fw-bold text-dark small"><%= new Date(booking.checkIn).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' }) %></span>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <div class="p-2 rounded-3 bg-white border shadow-sm">
+                                                                        <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;"><i class="fa-solid fa-calendar-xmark text-danger me-1"></i>Check-Out</small>
+                                                                        <span class="fw-bold text-dark small"><%= new Date(booking.checkOut).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' }) %></span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- Guests & Total Payout -->
+                                                            <div class="row g-2 align-items-center">
+                                                                <div class="col-6">
+                                                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">Guest Count</small>
+                                                                    <span class="fw-bold text-dark small"><i class="fa-solid fa-users me-1 text-primary"></i><%= booking.guests %> Guests</span>
+                                                                </div>
+                                                                <div class="col-6 text-end">
+                                                                    <small class="text-muted text-uppercase fw-bold d-block mb-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">Total Payout</small>
+                                                                    <span class="fs-6 fw-bold text-success px-3 py-1 bg-success-subtle rounded-pill border border-success-subtle d-inline-block">
+                                                                        ₹<%= booking.totalPrice ? booking.totalPrice.toLocaleString("en-IN") : '0' %>
+                                                                    </span>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <div class="modal-footer border-top p-3">

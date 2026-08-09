@@ -14,14 +14,18 @@ module.exports.listingSchema = joi.object({
     location: joi.string().required(),
     country: joi.string().required(),
     category: joi.string().valid(...validCategories).default("others"),
-    image: joi.object({
-      url: joi.string().allow("", null),
-      filename: joi.string().allow("", null)
-    }),
-    images: joi.array().items(joi.object({
-      url: joi.string().allow("", null),
-      filename: joi.string().allow("", null)
-    }))
+    image: joi.alternatives().try(
+      joi.object({
+        url: joi.string().allow("", null),
+        filename: joi.string().allow("", null)
+      }),
+      joi.string().allow("", null)
+    ).allow("", null),
+    images: joi.alternatives().try(
+      joi.array().items(joi.any()),
+      joi.object().allow(null),
+      joi.string().allow("", null)
+    ).allow("", null)
   }).required()
 })
 

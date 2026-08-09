@@ -88,11 +88,23 @@ function setupImageCropper(inputId, previewId, aspectRatio = NaN) {
         if (e.target.files && e.target.files[0]) {
             currentFileInput = newInputElement;
             currentPreviewImg = previewElement;
+
+            const selectedFileName = document.getElementById('selectedFileName');
+            if (selectedFileName) {
+                selectedFileName.textContent = e.target.files[0].name;
+            }
             
             let reader = new FileReader();
             reader.onload = function(event) {
+                if (previewElement) {
+                    previewElement.src = event.target.result;
+                    previewElement.style.display = 'block';
+                }
+
                 const imageToCrop = document.getElementById('imageToCrop');
-                imageToCrop.src = event.target.result;
+                if (imageToCrop) {
+                    imageToCrop.src = event.target.result;
+                }
                 
                 // Reset cropper if it exists
                 if(cropper) {
@@ -100,30 +112,36 @@ function setupImageCropper(inputId, previewId, aspectRatio = NaN) {
                     cropper = null;
                 }
 
-                cropperModal.show();
-                
-                // Initialize cropper when modal is FULLY shown
-                const onModalShown = function() {
-                    // Force a small delay to ensure image is rendered in the DOM
-                    setTimeout(() => {
-                        cropper = new Cropper(imageToCrop, {
-                            aspectRatio: aspectRatio,
-                            viewMode: 2,
-                            autoCropArea: 0.8,
-                            responsive: true,
-                            restore: false,
-                            checkOrientation: false,
-                            modal: true,
-                            guides: true,
-                            center: true,
-                            highlight: true,
-                            background: true
-                        });
-                    }, 100);
-                };
+                if (!cropperModal && cropperModalElement && typeof bootstrap !== 'undefined') {
+                    cropperModal = new bootstrap.Modal(cropperModalElement);
+                }
 
-                // Use 'one' listener pattern
-                cropperModalElement.addEventListener('shown.bs.modal', onModalShown, { once: true });
+                if (cropperModal) {
+                    cropperModal.show();
+                    
+                    // Initialize cropper when modal is FULLY shown
+                    const onModalShown = function() {
+                        setTimeout(() => {
+                            if (imageToCrop && typeof Cropper !== 'undefined') {
+                                cropper = new Cropper(imageToCrop, {
+                                    aspectRatio: aspectRatio,
+                                    viewMode: 2,
+                                    autoCropArea: 0.8,
+                                    responsive: true,
+                                    restore: false,
+                                    checkOrientation: false,
+                                    modal: true,
+                                    guides: true,
+                                    center: true,
+                                    highlight: true,
+                                    background: true
+                                });
+                            }
+                        }, 100);
+                    };
+
+                    cropperModalElement.addEventListener('shown.bs.modal', onModalShown, { once: true });
+                }
             }
             reader.readAsDataURL(e.target.files[0]);
         }
