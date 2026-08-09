@@ -80,13 +80,9 @@ function setupImageCropper(inputId, previewId, aspectRatio = NaN) {
     
     if(!inputElement) return;
     
-    // Remove previous listeners if any to prevent duplicates
-    const newInputElement = inputElement.cloneNode(true);
-    inputElement.parentNode.replaceChild(newInputElement, inputElement);
-    
-    newInputElement.addEventListener('change', function(e) {
+    inputElement.onchange = function(e) {
         if (e.target.files && e.target.files[0]) {
-            currentFileInput = newInputElement;
+            currentFileInput = inputElement;
             currentPreviewImg = previewElement;
 
             const selectedFileName = document.getElementById('selectedFileName');
@@ -145,5 +141,5 @@ function setupImageCropper(inputId, previewId, aspectRatio = NaN) {
             }
             reader.readAsDataURL(e.target.files[0]);
         }
-    });
+    };
 }

@@ -20,22 +20,17 @@
                     <div class="invalid-feedback"> Description is Empty</div>
                 </div>
                 <div class="mb-4">
-                    <label class="form-label fw-bold">Main Listing Image</label>
+                    <label for="listingImage" class="form-label fw-bold">Main Listing Image</label>
                     <div class="position-relative d-block w-100 mb-2" style="cursor: pointer; border-radius: 1rem; overflow: hidden;" onclick="document.getElementById('listingImage').click();">
                         <img id="listing-preview" src="<%= typeof originalImageUrl !== 'undefined' ? originalImageUrl : (listing.image ? listing.image.url : '') %>" class="img-fluid" style="width: 100%; height: 300px; object-fit: cover;">
                         <!-- Hover Edit Overlay -->
                         <div class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center listing-overlay" style="background: rgba(0,0,0,0.5); opacity: 0; transition: 0.2s;">
                             <i class="fa-solid fa-camera text-white mb-2" style="font-size: 3rem;"></i>
-                            <span class="text-white fw-bold fs-5">Change Main Photo</span>
+                            <span class="text-white fw-bold fs-5">Click to Change Main Photo</span>
                         </div>
                     </div>
-                    <div class="d-flex align-items-center gap-2 mt-2">
-                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold" onclick="document.getElementById('listingImage').click();">
-                            <i class="fa-solid fa-upload me-1"></i>Select New Main Photo
-                        </button>
-                        <span id="selectedFileName" class="small text-muted fw-semibold"></span>
-                    </div>
-                    <input type="file" id="listingImage" name="listing[image]" accept=".png, .jpg, .jpeg, .webp, image/*" class="d-none">
+                    <input type="file" id="listingImage" name="listing[image]" class="form-control" accept=".png, .jpg, .jpeg, .webp, image/*">
+                    <small class="text-muted"><i class="fa-solid fa-circle-info me-1"></i>Click the image above or choose a file to update main photo.</small>
                 </div>
 
                 <div class="mb-4">
