@@ -340,6 +340,7 @@ module.exports.resetPassword = async (req, res) => {
     }
 
     await user.setPassword(password);
+    user.sessionVersion = (user.sessionVersion || 0) + 1;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();

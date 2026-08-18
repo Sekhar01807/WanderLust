@@ -53,6 +53,10 @@ const userSchema = new Schema({
     resetPasswordExpires: {
         type: Date,
         select: false
+    },
+    sessionVersion: {
+        type: Number,
+        default: 0
     }
 });
 

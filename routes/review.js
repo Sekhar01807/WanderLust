@@ -4,9 +4,7 @@ const wrapAsync = require("../utils/wrapAsync.js");
 const { validateReview, isLoggedIn, isReviewAuthor } = require("../middleware.js");
 const { createReview, deleteReview } = require("../controllers/reviews.js");
 
-const multer = require('multer');
-const { storage } = require("../cloudConfig.js");
-const upload = multer({ storage });
+const { upload } = require("../cloudConfig.js");
 
 // review post Route
 router.post("/", isLoggedIn, upload.single('reviewImage'), validateReview, wrapAsync(createReview));

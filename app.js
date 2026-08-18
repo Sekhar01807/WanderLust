@@ -159,8 +159,28 @@ app.use(passport.initialize());
 app.use(passport.session());
 passport.use(new LocalStrategy(User.authenticate()));
 
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+passport.serializeUser((user, done) => {
+    done(null, { id: user._id.toString(), sessionVersion: user.sessionVersion || 0 });
+});
+
+passport.deserializeUser(async (serialized, done) => {
+    try {
+        const userId = (typeof serialized === "object" && serialized !== null) ? serialized.id : serialized;
+        const user = await User.findById(userId);
+        if (!user) {
+            return done(null, false);
+        }
+        if (typeof serialized === "object" && serialized !== null && serialized.sessionVersion !== undefined) {
+            if ((user.sessionVersion || 0) !== serialized.sessionVersion) {
+                // Invalidate stale sessions when password was reset/changed
+                return done(null, false);
+            }
+        }
+        return done(null, user);
+    } catch (err) {
+        return done(err);
+    }
+});
 
 // CSRF Protection Middleware
 const { csrfProtection } = require("./utils/csrf.js");

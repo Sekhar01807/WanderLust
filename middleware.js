@@ -65,9 +65,22 @@ module.exports.validateBooking = (req, res, next) => {
 
 module.exports.isReviewAuthor = async (req, res, next) => {
     let { id, reviewId } = req.params;
+    let listing = await Listing.findById(id);
+    if (!listing) {
+        req.flash("error", "Listing does not exist!");
+        return res.redirect("/listings");
+    }
     let review = await Review.findById(reviewId);
-    if (!review || !review.author.equals(res.locals.currUser._id)) {
+    if (!review) {
+        req.flash("error", "Review does not exist!");
+        return res.redirect(`/listings/${id}`);
+    }
+    if (!review.author.equals(res.locals.currUser._id)) {
         req.flash("error", "Access denied! You are not the author of this review.");
+        return res.redirect(`/listings/${id}`);
+    }
+    if (!listing.reviews.some(r => r.equals(reviewId))) {
+        req.flash("error", "This review does not belong to the specified listing.");
         return res.redirect(`/listings/${id}`);
     }
     next();

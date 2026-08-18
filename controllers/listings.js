@@ -49,6 +49,7 @@ module.exports.showListing = async (req, res) => {
 
     // Check if current user has an ACTIVE paid booking for this listing
     let userBooking = null;
+    let hasVerifiedStay = false;
     if (req.user) {
         const Booking = require("../models/booking");
         userBooking = await Booking.findOne({
@@ -56,9 +57,15 @@ module.exports.showListing = async (req, res) => {
             user: req.user._id,
             paymentStatus: "paid"
         }).sort({ createdAt: -1 });
+
+        hasVerifiedStay = userBooking ? true : !!(await Booking.exists({
+            listing: id,
+            user: req.user._id,
+            paymentStatus: { $in: ["paid", "completed"] }
+        }));
     }
 
-    res.render("listings/show.ejs", { listing, userBooking });
+    res.render("listings/show.ejs", { listing, userBooking, hasVerifiedStay });
 };
 
 module.exports.createListing = async (req, res, next) => {

@@ -24,4 +24,6 @@ const waitlistSchema = new Schema({
     }
 });
 
+waitlistSchema.index({ listing: 1, user: 1, checkIn: 1, checkOut: 1 }, { unique: true });
+
 module.exports = mongoose.model("Waitlist", waitlistSchema);

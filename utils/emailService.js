@@ -22,8 +22,17 @@ const emailStyles = `
     .footer-links a { color: #ff385c; text-decoration: none; margin: 0 10px; }
 `;
 
+function getFromEmail() {
+    const from = process.env.FROM_EMAIL && process.env.FROM_EMAIL.trim();
+    if (from) return from;
+    if (process.env.NODE_ENV === "production") {
+        throw new Error("CRITICAL CONFIGURATION ERROR: FROM_EMAIL environment variable must be configured in production mode.");
+    }
+    return "noreply@wanderlust.local";
+}
+
 const sendViaGmail = async (msg) => {
-    const user = process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com";
+    const user = getFromEmail();
     const pass = process.env.GMAIL_APP_PASSWORD;
 
     if (!pass) {
@@ -102,7 +111,7 @@ module.exports.sendWelcomeEmail = async (user, req) => {
     const baseUrl = getAppUrl(req);
     const msg = {
         to: user.email,
-        from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
+        from: getFromEmail(),
         subject: "Welcome to WanderLust! 🌍",
         html: `
             <html>
@@ -137,7 +146,7 @@ module.exports.sendBookingEmail = async (user, booking, listing, req) => {
     const baseUrl = getAppUrl(req);
     const msg = {
         to: user.email,
-        from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
+        from: getFromEmail(),
         subject: "Your Adventure is Confirmed! 🎉",
         html: `
             <html>
@@ -178,7 +187,7 @@ module.exports.sendHostBookingNotificationEmail = async (host, guest, booking, l
     const baseUrl = getAppUrl(req);
     const msg = {
         to: host.email,
-        from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
+        from: getFromEmail(),
         subject: `🎉 New Reservation Received for ${listing.title}!`,
         html: `
             <html>
@@ -219,7 +228,7 @@ module.exports.sendCancellationEmail = async (user, booking, listing, req) => {
     const baseUrl = getAppUrl(req);
     const msg = {
         to: user.email,
-        from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
+        from: getFromEmail(),
         subject: "Reservation Cancellation Confirmed ❌",
         html: `
             <html>
@@ -258,7 +267,7 @@ module.exports.sendWaitlistAvailableEmail = async (user, listing, req) => {
     const baseUrl = getAppUrl(req);
     const msg = {
         to: user.email,
-        from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
+        from: getFromEmail(),
         subject: `🎉 Dates Now Available for ${listing.title}!`,
         html: `
             <html>
@@ -296,7 +305,7 @@ module.exports.sendTripReminder = async (user, listing, daysDiff) => {
     const baseUrl = getAppUrl();
     const msg = {
         to: user.email,
-        from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
+        from: getFromEmail(),
         subject: `Reminder: Your stay at ${listing ? listing.title : 'WanderLust'} is in ${daysDiff} day${daysDiff > 1 ? 's' : ''}! ✈️`,
         html: `
             <html>
@@ -330,7 +339,7 @@ module.exports.sendPasswordResetEmail = async (user, resetToken, req) => {
     
     const msg = {
         to: user.email,
-        from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
+        from: getFromEmail(),
         subject: "Secure Password Reset 🔒",
         html: `
             <html>

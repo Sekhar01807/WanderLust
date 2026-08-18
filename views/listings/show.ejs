@@ -431,7 +431,7 @@
   <div class="row mt-4 mb-5">
     <div class="col-12 col-lg-10 offset-lg-1">
 
-      <% if (currUser && listing.owner && !listing.owner._id.equals(currUser._id)) { %>
+      <% if (currUser && (typeof hasVerifiedStay !== 'undefined' && hasVerifiedStay) && listing.owner && !listing.owner._id.equals(currUser._id)) { %>
 
         <hr class="mb-5 border-secondary-subtle" />
         
@@ -590,11 +590,22 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <!-- Safely embed listing data as JSON script block -->
+  <script type="application/json" id="listing-json-data"><%- JSON.stringify(listing).replace(/</g, '\\u003c').replace(/>/g, '\\u003e') %></script>
+
   <script>
     (function initUniversalMap() {
         const mapContainer = document.getElementById('map');
         const mapToken = "<%= mapToken %>";
-        const listing = <%- JSON.stringify(listing) %>;
+        let listing = {};
+        try {
+            const listingDataEl = document.getElementById('listing-json-data');
+            if (listingDataEl) {
+                listing = JSON.parse(listingDataEl.textContent);
+            }
+        } catch (e) {
+            console.error("Failed to parse listing data:", e);
+        }
         
         let coords = [78.4867, 17.3850]; // Fallback coordinates
         if (listing.geometry && listing.geometry.coordinates && listing.geometry.coordinates.length === 2) {
@@ -602,6 +613,13 @@
         }
 
         const latLon = [coords[1], coords[0]];
+
+        // Safely construct popup element
+        const popupDiv = document.createElement('div');
+        const h6 = document.createElement('h6');
+        h6.textContent = listing.title || '';
+        popupDiv.appendChild(h6);
+        const popupHtml = popupDiv.innerHTML;
 
         // Attempt Mapbox first
         try {
@@ -620,7 +638,7 @@
 
             new mapboxgl.Marker({ color: "#ff385c" })
                 .setLngLat(coords)
-                .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h6>${listing.title}</h6>`))
+                .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupHtml))
                 .addTo(mapbox);
 
         } catch (e) {
@@ -635,7 +653,7 @@
                 attribution: '&copy; OpenStreetMap'
             }).addTo(map);
             L.marker(latLon).addTo(map)
-                .bindPopup("<h6><%= listing.title %></h6>")
+                .bindPopup(popupHtml)
                 .openPopup();
             
             setTimeout(() => { map.invalidateSize(); }, 500);
@@ -967,10 +985,11 @@
                 div.className = `d-flex ${isMe ? 'justify-content-end' : 'justify-content-start'} mb-3 px-4`;
                 div.innerHTML = `
                     <div class="p-3 rounded-4 shadow-sm" style="max-width: 80%; background: ${isMe ? 'linear-gradient(135deg, #ff385c, #e03150)' : '#fff'}; color: ${isMe ? '#fff' : '#222'};">
-                        <p class="mb-0">${msg.content}</p>
+                        <p class="mb-0 msg-text"></p>
                         <small class="opacity-50 mt-1 d-block" style="font-size: 0.7rem;">${new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</small>
                     </div>
                 `;
+                div.querySelector('.msg-text').textContent = msg.content || '';
                 chatMessages.appendChild(div);
             });
             chatMessages.scrollTop = chatMessages.scrollHeight;

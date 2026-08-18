@@ -35,6 +35,22 @@ const bookingSchema = new Schema({
     },
 
 
+    refundStatus: {
+        type: String,
+        enum: ["none", "pending", "refunded", "failed"],
+        default: "none"
+    },
+    refundId: {
+        type: String,
+        sparse: true,
+        index: true
+    },
+    refundAmount: {
+        type: Number
+    },
+    cancelledAt: {
+        type: Date
+    },
     stripeSessionId: {
         type: String,
         sparse: true,

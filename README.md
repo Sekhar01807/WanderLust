@@ -20,24 +20,27 @@
 
 ### 💳 Transactional Booking & Stripe Integration
 - **Atomic Concurrency & Double-Booking Prevention**:
+  - Proactive purging of expired pending holds prior to overlap checks.
   - Atomic 30-minute temporary reservation holds created in the database *prior* to Stripe Checkout session initialization.
   - Hold expiration synchronized with Stripe Checkout Session's `expires_at` timestamp.
   - Real-time collision detection and rollback to eliminate double-spend and overlapping reservation race conditions.
+- **Paid Booking Cancellation with Automated Stripe Refunds**:
+  - Cancelling a confirmed paid booking triggers automated Stripe payment refunds (`stripe.refunds.create()`).
+  - Persists full refund state (`refundStatus`, `refundId`, `refundAmount`, `cancelledAt`) in the database with guest email confirmations.
 - **Authoritative Stripe Webhook Fulfillment (`POST /webhook`)**:
   - Strict **fail-closed** cryptographic signature verification (`stripe.webhooks.constructEvent`) — rejects all unsigned or forged payloads without fallback.
   - Automatic retry signaling: returns `HTTP 500` on any fulfillment failure so Stripe automatically retries event delivery with exponential backoff.
-  - Atomic transition from `pending` to `paid` upon payment completion.
-  - Automatic expiration and release of reservation holds on `checkout.session.expired` with instant waitlist notification.
+  - Dedicated handling for `checkout.session.completed` (atomic transition from `pending` to `paid`) and `checkout.session.expired` (hold release).
 - **Automated Refund Failsafe**:
-  - Guaranteed transactional consistency with automated Stripe refunds (`stripe.refunds.create()`) in the edge case of an unfulfillable conflict.
+  - Guaranteed transactional consistency with automated Stripe refunds in the edge case of an unfulfillable conflict.
 - **E-Receipts**: Official digital booking receipts with guest/host access control.
-- **Waitlist System**: Automated notifications sent when previously booked dates become available due to cancellation or hold expiration.
+- **Deduplicated Waitlist System**: Unique compound indexing prevents duplicate waitlist requests for the same user, listing, and date range, notifying guests immediately when reserved dates are freed up.
 
 ### 👤 User & Host Ecosystem
 - **Dual Role Profiles**: Travelers can browse, save wishlists, and reserve; Hosts get an analytics dashboard (earnings, active/cancelled reservations, and audit logs).
-- **Direct Messaging**: In-app messaging between guests and property owners with relationship authorization and scoped conversation deletion.
-- **Reviews & Ratings**: Review system with star ratings and comments.
-- **Automated Emails**: HTML email notifications via Nodemailer / SendGrid / Mailtrap for bookings, cancellations, waitlists, and reminders.
+- **Direct Messaging**: In-app messaging between guests and property owners with relationship authorization, scoped conversation deletion, and XSS-hardened textContent DOM rendering.
+- **Verified Reviews & Ratings**: Strict review creation policy requiring an actual confirmed/completed stay at the property; scoped review deletion verification preventing cross-listing mutations.
+- **Automated Emails**: HTML email notifications via Nodemailer / SendGrid / Mailtrap for bookings, cancellations, refunds, waitlists, and reminders with fail-closed sender controls in production.
 - **Cron Jobs**: Scheduled daily cron tasks for check-in and check-out email reminders.
 
 ---
@@ -46,16 +49,21 @@
 
 | Defense Layer | Implementation Details |
 | :--- | :--- |
+| **XSS Prevention (Chat & Views)** | Stored chat messages and user labels rendered using safe DOM `.textContent` properties. Listing metadata in client scripts is isolated inside non-executable `<script type="application/json">` blocks with unicode-escaped angle brackets (`\u003c`, `\u003e`). |
+| **Session Invalidation on Password Reset** | `sessionVersion` tracking on user accounts invalidates all pre-existing authenticated sessions across all devices immediately upon password reset. |
+| **Verified Stay Authorization** | Reviews restricted strictly to guests with confirmed/completed bookings; review deletion middleware validates listing association. |
+| **Paid Booking Refunds & Cancellation** | Full transactional refund handling via Stripe API with persisted database refund audit logs. |
 | **CSRF Protection** | Global session-backed CSRF middleware enforcing token validation on all state-changing verbs (`POST`, `PUT`, `PATCH`, `DELETE`), including `POST /logout`. Webhooks exempted via cryptographic signatures. |
 | **Stripe Webhook Verification** | Strict fail-closed verification rejecting missing configurations (500), missing signatures (400), and invalid signatures (400) with zero unsigned fallback. |
 | **Atomic Booking Holds** | Database holds acquired prior to Stripe session creation, synchronized with Stripe's 30-minute expiration, and protected by automated refund failsafes. |
+| **Upload Boundaries & MIME Filter** | Multer configured with strict MIME type allowlisting (`JPEG`, `PNG`, `WebP`) and a 5MB per-file boundary limit. |
+| **Fail-Closed Production Configuration** | Canonical `APP_URL` and `FROM_EMAIL` strictly required in production mode to prevent host header poisoning and unconfigured sender fallbacks. |
 | **Account Enumeration Defense** | Generic, timing-safe error messaging on `/signup`, `/login`, and `/forgot` to prevent discovery of registered emails and phone numbers. |
 | **Password Reset Security** | Reset tokens generated via `crypto.randomBytes(32)` and persisted as **SHA-256** hashes with 1-hour expiration. |
 | **Authentication & Sessions** | Passport.js local authentication, secure HTTP-only cookies with `SameSite=Lax`, and MongoDB session store. Ephemeral 256-bit crypto fallback in development; strictly fails closed in production without `SECRET`. |
 | **Injection & Query Sanitization** | `express-mongo-sanitize` middleware prevents NoSQL operator injection; regex inputs are strictly sanitized. |
 | **Rate Limiting** | `express-rate-limit` guards against brute-force attacks on auth and password reset endpoints. |
 | **HTTP Security Headers** | `helmet` configured with strict Content Security Policy (CSP), frame guards, and resource policies. |
-| **Message Access Control** | Explicit relationship authorization requiring host or interacting guest ownership before message creation or deletion. |
 
 ---
 
@@ -157,8 +165,8 @@ npm test
 - `test/csrf.test.js` — Session CSRF token lifecycle, `POST /logout` enforcement, and webhook exemption.
 - `test/messageAuth.test.js` — Scoped conversation deletion and host/guest authorization.
 - `test/schema.test.js` — Joi validation constraints for listings, reviews, and reservation dates.
-- `test/security.test.js` — SHA-256 deterministic token hashing and ReDoS search escaping.
-- `test/appUrl.test.js` — Multi-environment host resolution.
+- `test/security.test.js` — SHA-256 deterministic token hashing, ReDoS search escaping, JSON script tag breakout sanitization, and upload MIME allowlisting.
+- `test/appUrl.test.js` — Multi-environment host resolution and production fail-closed validation.
 
 ---
 

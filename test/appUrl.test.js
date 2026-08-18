@@ -30,12 +30,29 @@ test("getAppUrl - parses headers from request when APP_URL is unset", () => {
     process.env.APP_URL = originalEnv;
 });
 
-test("getAppUrl - falls back to localhost:8080 if neither APP_URL nor req headers exist", () => {
+test("getAppUrl - falls back to localhost:8080 if neither APP_URL nor req headers exist in development", () => {
     const originalEnv = process.env.APP_URL;
+    const originalNodeEnv = process.env.NODE_ENV;
     delete process.env.APP_URL;
+    process.env.NODE_ENV = "development";
 
     const url = getAppUrl();
     assert.equal(url, "http://localhost:8080");
 
     process.env.APP_URL = originalEnv;
+    process.env.NODE_ENV = originalNodeEnv;
+});
+
+test("getAppUrl - throws in production if APP_URL is unset", () => {
+    const originalEnv = process.env.APP_URL;
+    const originalNodeEnv = process.env.NODE_ENV;
+    delete process.env.APP_URL;
+    process.env.NODE_ENV = "production";
+
+    assert.throws(() => {
+        getAppUrl();
+    }, /CRITICAL CONFIGURATION ERROR/);
+
+    process.env.APP_URL = originalEnv;
+    process.env.NODE_ENV = originalNodeEnv;
 });

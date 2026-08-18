@@ -46,8 +46,14 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
         return res.redirect(`/listings/${id}`);
     }
 
-    // 1. Initial Overlap Check
+    // 1. Initial Overlap Check: Purge expired pending holds first
     const now = new Date();
+    await Booking.deleteMany({
+        listing: id,
+        paymentStatus: "pending",
+        expiresAt: { $lte: now }
+    });
+
     const overlappingBooking = await Booking.findOne({
         listing: id,
         $or: [
@@ -60,12 +66,11 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
 
     if (overlappingBooking) {
         const Waitlist = require("../models/waitlist");
-        await Waitlist.create({
-            listing: id,
-            user: req.user._id,
-            checkIn: reqCheckIn,
-            checkOut: reqCheckOut
-        });
+        await Waitlist.findOneAndUpdate(
+            { listing: id, user: req.user._id, checkIn: reqCheckIn, checkOut: reqCheckOut },
+            { $set: { notified: false, createdAt: new Date() } },
+            { upsert: true, new: true }
+        );
 
         req.flash("error", "⚠️ Sorry, this property is already booked or currently reserved by another guest for your selected dates! We have saved your interest and will email you instantly if these dates become available.");
         return res.redirect(`/listings/${id}`);
@@ -114,12 +119,11 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
     if (concurrentCollision) {
         await Booking.findByIdAndDelete(pendingHold._id);
         const Waitlist = require("../models/waitlist");
-        await Waitlist.create({
-            listing: id,
-            user: req.user._id,
-            checkIn: reqCheckIn,
-            checkOut: reqCheckOut
-        });
+        await Waitlist.findOneAndUpdate(
+            { listing: id, user: req.user._id, checkIn: reqCheckIn, checkOut: reqCheckOut },
+            { $set: { notified: false, createdAt: new Date() } },
+            { upsert: true, new: true }
+        );
         req.flash("error", "⚠️ These dates were just reserved by another guest. Please choose alternative dates.");
         return res.redirect(`/listings/${id}`);
     }
@@ -220,7 +224,7 @@ router.get("/success", isLoggedIn, wrapAsync(async (req, res) => {
     res.redirect(`/listings/${id}`);
 }));
 
-// DELETE / Cancellation Route - Verified Ownership & Scoped
+// DELETE / Cancellation Route - Verified Ownership & Scoped with Refund Processing
 router.delete("/:bookingId", isLoggedIn, wrapAsync(async (req, res) => {
     const { id, bookingId } = req.params;
     
@@ -244,8 +248,48 @@ router.delete("/:bookingId", isLoggedIn, wrapAsync(async (req, res) => {
         return res.redirect("/profile");
     }
 
-    // Mark target booking as cancelled
+    // Process Stripe refund if booking was paid
+    let refundIssued = false;
+    let refundAmount = 0;
+    let refundId = null;
+
+    if (booking.paymentStatus === "paid") {
+        if (booking.stripeSessionId && process.env.STRIPE_SECRET_KEY) {
+            try {
+                const session = await stripe.checkout.sessions.retrieve(booking.stripeSessionId);
+                if (session && session.payment_intent) {
+                    const refund = await stripe.refunds.create({
+                        payment_intent: session.payment_intent,
+                        reason: "requested_by_customer"
+                    });
+                    if (refund && (refund.status === "succeeded" || refund.status === "pending")) {
+                        refundIssued = true;
+                        refundId = refund.id;
+                        refundAmount = (refund.amount || (booking.totalPrice * 100)) / 100;
+                        booking.refundStatus = "refunded";
+                        booking.refundId = refundId;
+                        booking.refundAmount = refundAmount;
+                    } else {
+                        booking.refundStatus = "failed";
+                    }
+                } else {
+                    booking.refundStatus = "none";
+                }
+            } catch (refundErr) {
+                console.error("❌ Stripe Refund Error on cancellation:", refundErr.message);
+                booking.refundStatus = "failed";
+            }
+        } else {
+            booking.refundStatus = "none";
+        }
+    } else {
+        booking.refundStatus = "none";
+    }
+
+    // Mark target booking as cancelled and record timestamp
     booking.paymentStatus = "cancelled";
+    booking.cancelledAt = new Date();
+    booking.expiresAt = undefined;
     await booking.save();
 
     // Send cancellation email to guest
@@ -265,11 +309,14 @@ router.delete("/:bookingId", isLoggedIn, wrapAsync(async (req, res) => {
         }
     }
 
-    req.flash("success", "Reservation cancelled successfully. A confirmation email has been sent to you.");
+    const successMsg = refundIssued
+        ? `Reservation cancelled successfully. A full refund of ₹${refundAmount.toLocaleString("en-IN")} has been initiated to your original payment method.`
+        : "Reservation cancelled successfully. A confirmation email has been sent to you.";
+    req.flash("success", successMsg);
 
     // Handle AJAX/JSON requests for real-time UI updates
     if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest' || req.headers.accept?.includes('application/json')) {
-        return res.json({ success: true, message: "Reservation cancelled successfully." });
+        return res.json({ success: true, message: successMsg, refundIssued, refundAmount });
     }
 
     const referer = req.get("Referer") || "";

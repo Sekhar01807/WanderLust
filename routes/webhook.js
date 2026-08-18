@@ -47,8 +47,7 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
     // Process Supported Stripe Event Types
     try {
         switch (event.type) {
-            case "checkout.session.completed":
-            case "payment_intent.succeeded": {
+            case "checkout.session.completed": {
                 const session = event.data.object;
                 const result = await fulfillBooking(session, req);
                 
