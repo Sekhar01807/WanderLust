@@ -36,7 +36,7 @@ function csrfProtection(req, res, next) {
     const sessionToken = req.session.csrfToken;
 
     if (!submittedToken || typeof submittedToken !== "string" || !sessionToken) {
-        if (req.xhr || req.headers["x-requested-with"] === "XMLHttpRequest" || req.headers.accept?.includes("application/json") || req.url.includes("/messages")) {
+        if (req.xhr || req.headers["x-requested-with"] === "XMLHttpRequest" || req.headers.accept?.includes("application/json") || req.url?.includes("/messages")) {
             return res.status(403).json({ success: false, message: "Invalid or missing CSRF token." });
         }
         return next(new ExpressError(403, "Invalid or missing CSRF token. Please refresh the page and try again."));
@@ -50,7 +50,7 @@ function csrfProtection(req, res, next) {
         sessionTokenBuffer.length !== submittedTokenBuffer.length ||
         !crypto.timingSafeEqual(sessionTokenBuffer, submittedTokenBuffer)
     ) {
-        if (req.xhr || req.headers["x-requested-with"] === "XMLHttpRequest" || req.headers.accept?.includes("application/json") || req.url.includes("/messages")) {
+        if (req.xhr || req.headers["x-requested-with"] === "XMLHttpRequest" || req.headers.accept?.includes("application/json") || req.url?.includes("/messages")) {
             return res.status(403).json({ success: false, message: "Invalid or expired CSRF token." });
         }
         return next(new ExpressError(403, "Invalid or expired CSRF token. Please refresh the page and try again."));

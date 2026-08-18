@@ -296,7 +296,7 @@ module.exports.renderResetForm = async (req, res) => {
     const user = await User.findOne({ 
         resetPasswordToken: hashedToken, 
         resetPasswordExpires: { $gt: Date.now() } 
-    });
+    }).select("+resetPasswordToken +resetPasswordExpires");
 
     if (!user) {
         req.flash("error", "Password reset token is invalid or has expired.");
@@ -316,7 +316,7 @@ module.exports.resetPassword = async (req, res) => {
     const user = await User.findOne({ 
         resetPasswordToken: hashedToken, 
         resetPasswordExpires: { $gt: Date.now() } 
-    });
+    }).select("+resetPasswordToken +resetPasswordExpires");
 
     if (!user) {
         req.flash("error", "Password reset token is invalid or has expired.");

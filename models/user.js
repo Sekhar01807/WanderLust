@@ -46,10 +46,25 @@ const userSchema = new Schema({
         type: Boolean,
         default: true
     },
-    resetPasswordToken: String,
-    resetPasswordExpires: Date
+    resetPasswordToken: {
+        type: String,
+        select: false
+    },
+    resetPasswordExpires: {
+        type: Date,
+        select: false
+    }
 });
 
+userSchema.set("toJSON", {
+    transform: function (doc, ret) {
+        delete ret.resetPasswordToken;
+        delete ret.resetPasswordExpires;
+        delete ret.hash;
+        delete ret.salt;
+        return ret;
+    }
+});
 
 userSchema.plugin(passportLocalMongoose);
 
