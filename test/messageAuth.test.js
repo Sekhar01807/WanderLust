@@ -1,16 +1,37 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const mongoose = require("mongoose");
+const crypto = require("crypto");
+
+let mongoose = null;
+try {
+    mongoose = require("mongoose");
+} catch {
+    mongoose = null;
+}
+
+function isValidObjectId(id) {
+    if (mongoose && mongoose.Types && mongoose.Types.ObjectId) {
+        return mongoose.Types.ObjectId.isValid(id);
+    }
+    return typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id);
+}
+
+function generateObjectId() {
+    if (mongoose && mongoose.Types && mongoose.Types.ObjectId) {
+        return new mongoose.Types.ObjectId().toString();
+    }
+    return crypto.randomBytes(12).toString("hex");
+}
 
 /**
  * Helper simulating message deletion authorization check
  */
 function validateMessageDeletionAuth({ currentUserId, receiverId, listingId, listingOwnerId }) {
-    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+    if (!isValidObjectId(receiverId)) {
         return { authorized: false, status: 400, message: "Invalid receiver ID" };
     }
 
-    if (!listingId || !mongoose.Types.ObjectId.isValid(listingId)) {
+    if (!listingId || !isValidObjectId(listingId)) {
         return { authorized: false, status: 400, message: "Valid listing ID is required to scope conversation deletion" };
     }
 
@@ -42,8 +63,8 @@ function validateMessageDeletionAuth({ currentUserId, receiverId, listingId, lis
 }
 
 test("Message Deletion - rejects requests missing or with invalid listingId", () => {
-    const userId = new mongoose.Types.ObjectId().toString();
-    const receiverId = new mongoose.Types.ObjectId().toString();
+    const userId = generateObjectId();
+    const receiverId = generateObjectId();
 
     const missingListing = validateMessageDeletionAuth({
         currentUserId: userId,
@@ -65,9 +86,9 @@ test("Message Deletion - rejects requests missing or with invalid listingId", ()
 });
 
 test("Message Deletion - authorizes when requester is host/listing owner", () => {
-    const hostId = new mongoose.Types.ObjectId().toString();
-    const guestId = new mongoose.Types.ObjectId().toString();
-    const listingId = new mongoose.Types.ObjectId().toString();
+    const hostId = generateObjectId();
+    const guestId = generateObjectId();
+    const listingId = generateObjectId();
 
     const authCheck = validateMessageDeletionAuth({
         currentUserId: hostId,
@@ -81,9 +102,9 @@ test("Message Deletion - authorizes when requester is host/listing owner", () =>
 });
 
 test("Message Deletion - authorizes when receiver is host/listing owner (requester is guest)", () => {
-    const hostId = new mongoose.Types.ObjectId().toString();
-    const guestId = new mongoose.Types.ObjectId().toString();
-    const listingId = new mongoose.Types.ObjectId().toString();
+    const hostId = generateObjectId();
+    const guestId = generateObjectId();
+    const listingId = generateObjectId();
 
     const authCheck = validateMessageDeletionAuth({
         currentUserId: guestId,
@@ -97,10 +118,10 @@ test("Message Deletion - authorizes when receiver is host/listing owner (request
 });
 
 test("Message Deletion - denies unrelated third parties", () => {
-    const thirdPartyId = new mongoose.Types.ObjectId().toString();
-    const randomUserId = new mongoose.Types.ObjectId().toString();
-    const hostId = new mongoose.Types.ObjectId().toString();
-    const listingId = new mongoose.Types.ObjectId().toString();
+    const thirdPartyId = generateObjectId();
+    const randomUserId = generateObjectId();
+    const hostId = generateObjectId();
+    const listingId = generateObjectId();
 
     const authCheck = validateMessageDeletionAuth({
         currentUserId: thirdPartyId,

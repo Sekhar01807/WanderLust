@@ -12,9 +12,12 @@ if (process.env.STRIPE_SECRET_KEY) {
  * Authoritative, Idempotent Booking Fulfillment
  * Can be called by Stripe Webhook (checkout.session.completed) or the /success redirect route.
  * 
+ * Guarantees atomic transition from pending to paid and triggers automated Stripe refunds
+ * in the theoretical event of an unfulfillable conflict.
+ * 
  * @param {Object|string} sessionOrId - Stripe Checkout Session object or session ID
  * @param {Object} [req] - Express request object for email generation context
- * @returns {Promise<{success: boolean, booking?: Object, conflict?: boolean, message?: string, alreadyFulfilled?: boolean}>}
+ * @returns {Promise<{success: boolean, booking?: Object, conflict?: boolean, refunded?: boolean, message?: string, alreadyFulfilled?: boolean}>}
  */
 async function fulfillBooking(sessionOrId, req = null) {
     if (!stripe && process.env.STRIPE_SECRET_KEY) {
@@ -48,10 +51,16 @@ async function fulfillBooking(sessionOrId, req = null) {
         return { success: false, message: "Payment has not been completed." };
     }
 
-    const { checkIn, checkOut, guests, userId, listingId } = (session && session.metadata) ? session.metadata : {};
+    const { checkIn, checkOut, guests, userId, listingId, bookingId } = (session && session.metadata) ? session.metadata : {};
 
-    // 1. Idempotency Check: Look up existing booking for this Stripe session
-    let booking = await Booking.findOne({ stripeSessionId: sessionId });
+    // 1. Idempotency Check: Look up existing booking for this Stripe session or bookingId
+    let booking = null;
+    if (sessionId) {
+        booking = await Booking.findOne({ stripeSessionId: sessionId });
+    }
+    if (!booking && bookingId) {
+        booking = await Booking.findById(bookingId);
+    }
 
     if (booking && booking.paymentStatus === "paid") {
         return { success: true, booking, alreadyFulfilled: true };
@@ -79,6 +88,23 @@ async function fulfillBooking(sessionOrId, req = null) {
 
     if (paidConflict) {
         console.error(`⚠️ Race condition collision detected on listing ${targetListingId} for session ${sessionId}`);
+        
+        let autoRefundSuccess = false;
+        if (session && session.payment_intent && stripe) {
+            try {
+                const refund = await stripe.refunds.create({
+                    payment_intent: session.payment_intent,
+                    reason: "duplicate"
+                });
+                if (refund && refund.status === "succeeded") {
+                    autoRefundSuccess = true;
+                    console.log(`✅ Automatically issued Stripe refund for payment intent: ${session.payment_intent}`);
+                }
+            } catch (refundErr) {
+                console.error("❌ Auto-refund attempt error:", refundErr.message);
+            }
+        }
+
         if (booking) {
             booking.paymentStatus = "failed";
             booking.expiresAt = undefined;
@@ -96,10 +122,13 @@ async function fulfillBooking(sessionOrId, req = null) {
             });
             await conflictBooking.save();
         }
+
         return {
             success: false,
             conflict: true,
-            message: "Double booking collision: An overlapping reservation was completed before fulfillment."
+            refunded: autoRefundSuccess,
+            message: "Double booking collision: An overlapping reservation was completed. " +
+                     (autoRefundSuccess ? "An automatic full refund has been issued." : "Please contact support for refund.")
         };
     }
 
@@ -108,10 +137,19 @@ async function fulfillBooking(sessionOrId, req = null) {
     const user = await User.findById(targetUserId);
 
     if (booking) {
-        booking.paymentStatus = "paid";
-        booking.expiresAt = undefined;
-        booking.totalPrice = amountTotal;
-        await booking.save();
+        // Atomic update from pending to paid
+        booking = await Booking.findOneAndUpdate(
+            { _id: booking._id, paymentStatus: { $in: ["pending", "paid"] } },
+            {
+                $set: {
+                    paymentStatus: "paid",
+                    totalPrice: amountTotal,
+                    stripeSessionId: sessionId || booking.stripeSessionId
+                },
+                $unset: { expiresAt: "" }
+            },
+            { new: true }
+        );
     } else {
         booking = new Booking({
             listing: targetListingId,
@@ -142,3 +180,4 @@ async function fulfillBooking(sessionOrId, req = null) {
 }
 
 module.exports = { fulfillBooking };
+

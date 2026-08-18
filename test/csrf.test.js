@@ -123,6 +123,8 @@ test("CSRF Middleware - returns 403 JSON for AJAX/JSON request with invalid toke
 
     assert.equal(statusCode, 403);
     assert.equal(jsonResponse.success, false);
+});
+
 test("CSRF Middleware - enforces CSRF protection on POST /logout", () => {
     const validToken = "session-token-logout-test-12345";
     

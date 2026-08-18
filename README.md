@@ -19,15 +19,19 @@
 - **Media Management**: High-resolution image uploads with Cloudinary storage and optimization.
 
 ### 💳 Transactional Booking & Stripe Integration
-- **Concurrency & Double-Booking Prevention**:
-  - Atomic 15-minute temporary reservation holds during active checkout sessions.
-  - Real-time collision detection to eliminate double-spend / overlapping reservation race conditions.
+- **Atomic Concurrency & Double-Booking Prevention**:
+  - Atomic 30-minute temporary reservation holds created in the database *prior* to Stripe Checkout session initialization.
+  - Hold expiration synchronized with Stripe Checkout Session's `expires_at` timestamp.
+  - Real-time collision detection and rollback to eliminate double-spend and overlapping reservation race conditions.
 - **Authoritative Stripe Webhook Fulfillment (`POST /webhook`)**:
-  - Server-to-server webhook processing with cryptographic signature verification (`checkout.session.completed`, `payment_intent.succeeded`).
-  - Guarantees booking finalization even if the user drops network connection or closes the browser before redirect.
-  - Automatic expiration and release of reservation holds on `checkout.session.expired`.
+  - Strict **fail-closed** cryptographic signature verification (`stripe.webhooks.constructEvent`) — rejects all unsigned or forged payloads without fallback.
+  - Automatic retry signaling: returns `HTTP 500` on any fulfillment failure so Stripe automatically retries event delivery with exponential backoff.
+  - Atomic transition from `pending` to `paid` upon payment completion.
+  - Automatic expiration and release of reservation holds on `checkout.session.expired` with instant waitlist notification.
+- **Automated Refund Failsafe**:
+  - Guaranteed transactional consistency with automated Stripe refunds (`stripe.refunds.create()`) in the edge case of an unfulfillable conflict.
 - **E-Receipts**: Official digital booking receipts with guest/host access control.
-- **Waitlist System**: Automated notifications sent when previously booked dates become available due to cancellation.
+- **Waitlist System**: Automated notifications sent when previously booked dates become available due to cancellation or hold expiration.
 
 ### 👤 User & Host Ecosystem
 - **Dual Role Profiles**: Travelers can browse, save wishlists, and reserve; Hosts get an analytics dashboard (earnings, active/cancelled reservations, and audit logs).
@@ -43,6 +47,8 @@
 | Defense Layer | Implementation Details |
 | :--- | :--- |
 | **CSRF Protection** | Global session-backed CSRF middleware enforcing token validation on all state-changing verbs (`POST`, `PUT`, `PATCH`, `DELETE`), including `POST /logout`. Webhooks exempted via cryptographic signatures. |
+| **Stripe Webhook Verification** | Strict fail-closed verification rejecting missing configurations (500), missing signatures (400), and invalid signatures (400) with zero unsigned fallback. |
+| **Atomic Booking Holds** | Database holds acquired prior to Stripe session creation, synchronized with Stripe's 30-minute expiration, and protected by automated refund failsafes. |
 | **Account Enumeration Defense** | Generic, timing-safe error messaging on `/signup`, `/login`, and `/forgot` to prevent discovery of registered emails and phone numbers. |
 | **Password Reset Security** | Reset tokens generated via `crypto.randomBytes(32)` and persisted as **SHA-256** hashes with 1-hour expiration. |
 | **Authentication & Sessions** | Passport.js local authentication, secure HTTP-only cookies with `SameSite=Lax`, and MongoDB session store. Ephemeral 256-bit crypto fallback in development; strictly fails closed in production without `SECRET`. |
@@ -138,17 +144,19 @@ Open [http://localhost:8080](http://localhost:8080) in your browser.
 
 ## 🧪 Automated Testing
 
-WanderLust includes automated test suites covering input schemas, CSRF protections, booking hold concurrency, relationship authorization, and security sanitization:
+WanderLust includes automated test suites covering input schemas, CSRF protections, webhook security, booking hold concurrency, fulfillment consistency, relationship authorization, and security sanitization:
 
 ```bash
 npm test
 ```
 
 ### Test Coverage:
-- `test/schema.test.js` — Joi validation constraints for listings, reviews, and reservation dates.
+- `test/webhook.test.js` — Fail-closed signature verification, missing secret/signature, retry status (500), and success (200) handling.
+- `test/fulfillment.test.js` — Idempotent fulfillment, atomic status transitions (`pending` → `paid`), and auto-refund handling.
+- `test/bookingHold.test.js` — Date overlap algorithms, active vs expired hold blocking, 30-minute expiration sync with Stripe `expires_at`, and concurrency collision detection.
 - `test/csrf.test.js` — Session CSRF token lifecycle, `POST /logout` enforcement, and webhook exemption.
-- `test/bookingHold.test.js` — Date overlap algorithms, active 15-minute hold validation, and expired hold lifecycle.
 - `test/messageAuth.test.js` — Scoped conversation deletion and host/guest authorization.
+- `test/schema.test.js` — Joi validation constraints for listings, reviews, and reservation dates.
 - `test/security.test.js` — SHA-256 deterministic token hashing and ReDoS search escaping.
 - `test/appUrl.test.js` — Multi-environment host resolution.
 

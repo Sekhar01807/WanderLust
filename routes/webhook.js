@@ -3,39 +3,41 @@ const router = express.Router();
 const Booking = require("../models/booking");
 const { fulfillBooking } = require("../utils/bookingFulfillment");
 
-let stripe = null;
-if (process.env.STRIPE_SECRET_KEY) {
-    stripe = require("stripe")(process.env.STRIPE_SECRET_KEY.trim());
-}
-
 /**
  * Stripe Webhook Handler
- * Authoritative fulfillment path for Stripe Checkout events
+ * Authoritative fulfillment path for Stripe Checkout events.
+ * Enforces strict cryptographic signature verification and fail-closed security.
  */
 router.post("/", express.raw({ type: "application/json" }), async (req, res) => {
-    if (!stripe && process.env.STRIPE_SECRET_KEY) {
-        stripe = require("stripe")(process.env.STRIPE_SECRET_KEY.trim());
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+
+    // Fail closed: Webhook secret must be explicitly configured
+    if (!webhookSecret || !webhookSecret.trim()) {
+        console.error("❌ CRITICAL: Stripe Webhook Secret (STRIPE_WEBHOOK_SECRET) is not configured.");
+        return res.status(500).send("Webhook secret configuration error on server");
+    }
+
+    // Fail closed: Stripe secret key must be configured
+    if (!stripeSecretKey || !stripeSecretKey.trim()) {
+        console.error("❌ CRITICAL: Stripe Secret Key (STRIPE_SECRET_KEY) is not configured.");
+        return res.status(500).send("Stripe SDK configuration error on server");
     }
 
     const sig = req.headers["stripe-signature"];
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!sig) {
+        console.error("❌ Stripe Webhook Error: Missing stripe-signature header.");
+        return res.status(400).send("Missing stripe-signature header");
+    }
+
+    const stripe = require("stripe")(stripeSecretKey.trim());
     let event;
 
-    if (webhookSecret && sig && stripe) {
-        try {
-            event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-        } catch (err) {
-            console.error("❌ Stripe Webhook Signature Error:", err.message);
-            return res.status(400).send(`Webhook Signature Verification Error: ${err.message}`);
-        }
-    } else {
-        // Fallback for dev / test environments when payload is raw buffer or JSON
-        try {
-            event = typeof req.body === "string" ? JSON.parse(req.body) : (Buffer.isBuffer(req.body) ? JSON.parse(req.body.toString("utf8")) : req.body);
-        } catch (err) {
-            console.error("❌ Failed to parse webhook payload:", err.message);
-            return res.status(400).send("Invalid webhook payload format");
-        }
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret.trim());
+    } catch (err) {
+        console.error("❌ Stripe Webhook Signature Verification Error:", err.message);
+        return res.status(400).send(`Webhook Signature Verification Error: ${err.message}`);
     }
 
     if (!event || !event.type) {
@@ -43,35 +45,66 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
     }
 
     // Process Supported Stripe Event Types
-    switch (event.type) {
-        case "checkout.session.completed":
-        case "payment_intent.succeeded": {
-            const session = event.data.object;
-            const result = await fulfillBooking(session, req);
-            if (!result.success && result.conflict) {
-                console.warn("⚠️ Webhook fulfillment encountered booking conflict for session:", session.id);
+    try {
+        switch (event.type) {
+            case "checkout.session.completed":
+            case "payment_intent.succeeded": {
+                const session = event.data.object;
+                const result = await fulfillBooking(session, req);
+                
+                if (!result.success) {
+                    console.error("❌ Webhook fulfillment failed for session:", session && session.id, result.message);
+                    // Return HTTP 500 so Stripe will retry with exponential backoff
+                    return res.status(500).json({ error: result.message || "Fulfillment failed" });
+                }
+                break;
             }
-            break;
+
+            case "checkout.session.expired": {
+                const session = event.data.object;
+                if (session && session.id) {
+                    const booking = await Booking.findOne({ stripeSessionId: session.id, paymentStatus: "pending" });
+                    if (booking) {
+                        booking.paymentStatus = "cancelled";
+                        booking.expiresAt = undefined;
+                        await booking.save();
+                        console.log(`ℹ️ Released reservation hold for expired checkout session: ${session.id}`);
+
+                        // Notify waitlisted users that dates are available again
+                        try {
+                            const Waitlist = require("../models/waitlist");
+                            const Listing = require("../models/listing");
+                            const { sendWaitlistAvailableEmail } = require("../utils/emailService");
+                            
+                            const listing = await Listing.findById(booking.listing);
+                            if (listing) {
+                                const waitlistedEntries = await Waitlist.find({ listing: booking.listing, notified: false }).populate("user");
+                                for (let entry of waitlistedEntries) {
+                                    if (entry.user && entry.user.email) {
+                                        await sendWaitlistAvailableEmail(entry.user, listing, req);
+                                        entry.notified = true;
+                                        await entry.save();
+                                    }
+                                }
+                            }
+                        } catch (notifyErr) {
+                            console.error("⚠️ Failed to notify waitlist on session expiration:", notifyErr.message);
+                        }
+                    }
+                }
+                break;
+            }
+
+            default:
+                // Unhandled event types acknowledged silently
+                break;
         }
 
-        case "checkout.session.expired": {
-            const session = event.data.object;
-            if (session && session.id) {
-                await Booking.updateOne(
-                    { stripeSessionId: session.id, paymentStatus: "pending" },
-                    { $set: { paymentStatus: "cancelled" }, $unset: { expiresAt: "" } }
-                );
-                console.log(`ℹ️ Released reservation hold for expired checkout session: ${session.id}`);
-            }
-            break;
-        }
-
-        default:
-            // Unhandled event types acknowledged silently
-            break;
+        return res.status(200).json({ received: true });
+    } catch (processErr) {
+        console.error("❌ Unexpected error during webhook processing:", processErr.message);
+        return res.status(500).json({ error: "Internal webhook processing error" });
     }
-
-    res.json({ received: true });
 });
 
 module.exports = router;

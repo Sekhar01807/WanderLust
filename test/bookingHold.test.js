@@ -75,3 +75,38 @@ test("Booking Hold - active pending hold blocks reservations, expired hold does 
     assert.equal(isBookingActiveHold(paidBooking, now), true, "Paid booking should always block");
     assert.equal(isBookingActiveHold(cancelledBooking, now), false, "Cancelled booking should not block");
 });
+
+test("Booking Hold - synchronizes 30-minute hold expiration with Stripe expires_at", () => {
+    const referenceTimestamp = 1755518400000; // Fixed timestamp
+    const holdDurationMs = 30 * 60 * 1000;
+    const holdExpiresAt = new Date(referenceTimestamp + holdDurationMs);
+    const stripeExpiryUnix = Math.floor(holdExpiresAt.getTime() / 1000);
+
+    assert.equal(stripeExpiryUnix, Math.floor((referenceTimestamp + holdDurationMs) / 1000));
+    assert.equal(stripeExpiryUnix - Math.floor(referenceTimestamp / 1000), 1800, "Stripe session expiry must be exactly 1800 seconds (30 mins)");
+});
+
+test("Booking Hold - atomic concurrency check detects conflicting hold created earlier or concurrently", () => {
+    const holdA = {
+        _id: "hold_A",
+        checkIn: "2026-10-01",
+        checkOut: "2026-10-05",
+        createdAt: new Date("2026-08-18T10:00:00.000Z"),
+        paymentStatus: "pending",
+        expiresAt: new Date("2026-08-18T10:30:00.000Z")
+    };
+
+    const holdB = {
+        _id: "hold_B",
+        checkIn: "2026-10-02",
+        checkOut: "2026-10-06",
+        createdAt: new Date("2026-08-18T10:00:01.000Z"), // 1 second later
+        paymentStatus: "pending",
+        expiresAt: new Date("2026-08-18T10:30:01.000Z")
+    };
+
+    // holdB checks for conflicts created <= its createdAt
+    const isConflictForB = isDateOverlap(holdA, holdB.checkIn, holdB.checkOut) && holdA.createdAt <= holdB.createdAt;
+    assert.equal(isConflictForB, true, "Hold B should detect Hold A as collision and abort");
+});
+

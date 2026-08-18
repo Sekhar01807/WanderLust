@@ -46,7 +46,7 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
         return res.redirect(`/listings/${id}`);
     }
 
-    // Double-Booking Prevention: Check if listing is already booked or actively held
+    // 1. Initial Overlap Check
     const now = new Date();
     const overlappingBooking = await Booking.findOne({
         listing: id,
@@ -82,9 +82,53 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
         return res.redirect(`/listings/${id}`);
     }
 
+    // Hold expiration: 30 minutes, synchronized with Stripe Checkout Session expiration
+    const holdExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    // 2. Atomically create pending reservation hold BEFORE external Stripe API call
+    const pendingHold = new Booking({
+        listing: id,
+        user: req.user._id,
+        checkIn: reqCheckIn,
+        checkOut: reqCheckOut,
+        guests: guestsNum,
+        totalPrice: amount,
+        paymentStatus: "pending",
+        expiresAt: holdExpiresAt
+    });
+    await pendingHold.save();
+
+    // 3. Atomic Concurrency Collision Check: ensure no other reservation claimed this slot
+    const concurrentCollision = await Booking.findOne({
+        _id: { $ne: pendingHold._id },
+        listing: id,
+        $or: [
+            { paymentStatus: "paid" },
+            { paymentStatus: "pending", expiresAt: { $gt: new Date() } }
+        ],
+        checkIn: { $lt: reqCheckOut },
+        checkOut: { $gt: reqCheckIn },
+        createdAt: { $lte: pendingHold.createdAt }
+    });
+
+    if (concurrentCollision) {
+        await Booking.findByIdAndDelete(pendingHold._id);
+        const Waitlist = require("../models/waitlist");
+        await Waitlist.create({
+            listing: id,
+            user: req.user._id,
+            checkIn: reqCheckIn,
+            checkOut: reqCheckOut
+        });
+        req.flash("error", "⚠️ These dates were just reserved by another guest. Please choose alternative dates.");
+        return res.redirect(`/listings/${id}`);
+    }
+
     const baseUrl = getAppUrl(req);
 
+    // 4. Create Stripe Checkout Session with synchronized expiration
     try {
+        const stripeExpiryUnix = Math.floor(holdExpiresAt.getTime() / 1000);
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             line_items: [{
@@ -99,6 +143,7 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
                 quantity: 1,
             }],
             mode: "payment",
+            expires_at: stripeExpiryUnix,
             success_url: `${baseUrl}/listings/${id}/booking/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${baseUrl}/listings/${id}`,
             metadata: { 
@@ -106,50 +151,20 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
                 checkOut: reqCheckOut.toISOString(), 
                 guests: guestsNum.toString(), 
                 listingId: id.toString(), 
-                userId: req.user._id.toString() 
+                userId: req.user._id.toString(),
+                bookingId: pendingHold._id.toString()
             }
         });
 
-        // Create 15-minute temporary reservation hold linked to Stripe Session ID
-        const pendingHold = new Booking({
-            listing: id,
-            user: req.user._id,
-            checkIn: reqCheckIn,
-            checkOut: reqCheckOut,
-            guests: guestsNum,
-            totalPrice: amount,
-            paymentStatus: "pending",
-            stripeSessionId: session.id,
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15-minute hold
-        });
+        // Link the unique Stripe Checkout Session ID to our held reservation
+        pendingHold.stripeSessionId = session.id;
         await pendingHold.save();
-
-        // Concurrency collision check: ensure no competing active booking occurred simultaneously
-        const concurrentCollision = await Booking.findOne({
-            _id: { $ne: pendingHold._id },
-            listing: id,
-            $or: [
-                { paymentStatus: "paid" },
-                { paymentStatus: "pending", expiresAt: { $gt: new Date() } }
-            ],
-            checkIn: { $lt: reqCheckOut },
-            checkOut: { $gt: reqCheckIn }
-        });
-
-        if (concurrentCollision) {
-            await Booking.findByIdAndDelete(pendingHold._id);
-            try {
-                await stripe.checkout.sessions.expire(session.id);
-            } catch (expireErr) {
-                // Ignore expiration error if already closed
-            }
-            req.flash("error", "⚠️ These dates were just reserved by another guest. Please choose alternative dates.");
-            return res.redirect(`/listings/${id}`);
-        }
 
         res.redirect(303, session.url);
     } catch (err) {
         console.error("❌ STRIPE API ERROR:", err.message);
+        // Rollback hold immediately on Stripe API failure so listing dates remain free
+        await Booking.findByIdAndDelete(pendingHold._id);
         req.flash("error", "Stripe Connection Error: " + err.message);
         res.redirect(`/listings/${id}`);
     }
@@ -189,7 +204,7 @@ router.get("/success", isLoggedIn, wrapAsync(async (req, res) => {
 
     if (!fulfillment.success) {
         if (fulfillment.conflict) {
-            req.flash("error", "⚠️ Another guest completed reservation for these dates just before you. Your payment was captured and our support team will process a full refund or rebooking immediately.");
+            req.flash("error", "⚠️ " + (fulfillment.message || "Reservation collision detected. An automatic full refund has been issued."));
         } else {
             req.flash("error", fulfillment.message || "Unable to complete reservation. Please contact support.");
         }
