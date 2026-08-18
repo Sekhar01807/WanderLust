@@ -81,6 +81,8 @@ const sendViaMailtrap = async (mailOptions) => {
     }
 };
 
+const { getAppUrl } = require("./appUrl");
+
 const dispatchEmail = async (msg) => {
     // 1. Try Gmail SMTP first if GMAIL_APP_PASSWORD is set in .env
     const gmailSuccess = await sendViaGmail(msg);
@@ -96,7 +98,8 @@ const dispatchEmail = async (msg) => {
     await sendViaMailtrap(msg);
 };
 
-module.exports.sendWelcomeEmail = async (user) => {
+module.exports.sendWelcomeEmail = async (user, req) => {
+    const baseUrl = getAppUrl(req);
     const msg = {
         to: user.email,
         from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
@@ -113,7 +116,7 @@ module.exports.sendWelcomeEmail = async (user) => {
                             <h2 style="color: #222;">Hi ${user.username}!</h2>
                             <p>We're absolutely thrilled to have you join our global community of adventurers. Your journey to finding the most unique stays around the world starts today.</p>
                             <p>Whether you're looking for a cozy cabin or a luxury villa, WanderLust has the perfect place waiting for you.</p>
-                            <a href="http://localhost:8080/listings" class="btn">Start Exploring Now</a>
+                            <a href="${baseUrl}/listings" class="btn">Start Exploring Now</a>
                         </div>
                         <div class="footer">
                             <p>&copy; 2026 WanderLust Inc. | All rights reserved.</p>
@@ -130,7 +133,8 @@ module.exports.sendWelcomeEmail = async (user) => {
     await dispatchEmail(msg);
 };
 
-module.exports.sendBookingEmail = async (user, booking, listing) => {
+module.exports.sendBookingEmail = async (user, booking, listing, req) => {
+    const baseUrl = getAppUrl(req);
     const msg = {
         to: user.email,
         from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
@@ -155,7 +159,7 @@ module.exports.sendBookingEmail = async (user, booking, listing) => {
                             </div>
 
                             <p>You can manage your booking and message the host directly from your dashboard.</p>
-                            <a href="http://localhost:8080/profile" class="btn">View Booking Details</a>
+                            <a href="${baseUrl}/profile" class="btn">View Booking Details</a>
                         </div>
                         <div class="footer">
                             <p>Need help? Contact our 24/7 support team.</p>
@@ -170,7 +174,8 @@ module.exports.sendBookingEmail = async (user, booking, listing) => {
     await dispatchEmail(msg);
 };
 
-module.exports.sendHostBookingNotificationEmail = async (host, guest, booking, listing) => {
+module.exports.sendHostBookingNotificationEmail = async (host, guest, booking, listing, req) => {
+    const baseUrl = getAppUrl(req);
     const msg = {
         to: host.email,
         from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
@@ -196,7 +201,7 @@ module.exports.sendHostBookingNotificationEmail = async (host, guest, booking, l
                             </div>
 
                             <p>You can view full reservation details and message your guest directly from your host dashboard.</p>
-                            <a href="http://localhost:8080/profile" class="btn">View Reservation Details</a>
+                            <a href="${baseUrl}/profile" class="btn">View Reservation Details</a>
                         </div>
                         <div class="footer">
                             <p>&copy; 2026 WanderLust Inc. | Host Management System</p>
@@ -210,7 +215,8 @@ module.exports.sendHostBookingNotificationEmail = async (host, guest, booking, l
     await dispatchEmail(msg);
 };
 
-module.exports.sendCancellationEmail = async (user, booking, listing) => {
+module.exports.sendCancellationEmail = async (user, booking, listing, req) => {
+    const baseUrl = getAppUrl(req);
     const msg = {
         to: user.email,
         from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
@@ -234,7 +240,7 @@ module.exports.sendCancellationEmail = async (user, booking, listing) => {
                             </div>
 
                             <p>We hope to welcome you back on your next adventure!</p>
-                            <a href="http://localhost:8080/listings" class="btn" style="background-color: #343a40; color: #fff !important;">Explore Other Stays</a>
+                            <a href="${baseUrl}/listings" class="btn" style="background-color: #343a40; color: #fff !important;">Explore Other Stays</a>
                         </div>
                         <div class="footer">
                             <p>&copy; 2026 WanderLust Inc. | Customer Support</p>
@@ -248,7 +254,8 @@ module.exports.sendCancellationEmail = async (user, booking, listing) => {
     await dispatchEmail(msg);
 };
 
-module.exports.sendWaitlistAvailableEmail = async (user, listing) => {
+module.exports.sendWaitlistAvailableEmail = async (user, listing, req) => {
+    const baseUrl = getAppUrl(req);
     const msg = {
         to: user.email,
         from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
@@ -271,7 +278,7 @@ module.exports.sendWaitlistAvailableEmail = async (user, listing) => {
                             </div>
 
                             <p>Book now before someone else reserves these dates!</p>
-                            <a href="http://localhost:8080/listings/${listing._id}" class="btn" style="background-color: #28a745; color: #fff !important;">Book ${listing.title} Now</a>
+                            <a href="${baseUrl}/listings/${listing._id}" class="btn" style="background-color: #28a745; color: #fff !important;">Book ${listing.title} Now</a>
                         </div>
                         <div class="footer">
                             <p>&copy; 2026 WanderLust Inc. | Priority Availability Notification</p>
@@ -285,12 +292,41 @@ module.exports.sendWaitlistAvailableEmail = async (user, listing) => {
     await dispatchEmail(msg);
 };
 
+module.exports.sendTripReminder = async (user, listing, daysDiff) => {
+    const baseUrl = getAppUrl();
+    const msg = {
+        to: user.email,
+        from: process.env.FROM_EMAIL || "sekharsekhar1919@gmail.com",
+        subject: `Reminder: Your stay at ${listing ? listing.title : 'WanderLust'} is in ${daysDiff} day${daysDiff > 1 ? 's' : ''}! ✈️`,
+        html: `
+            <html>
+                <head><style>${emailStyles}</style></head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>Upcoming Trip Reminder</h1>
+                        </div>
+                        <div class="content">
+                            <h2 style="color: #222;">Hi ${user.username}!</h2>
+                            <p>Your exciting trip to <strong>${listing ? listing.title : 'your destination'}</strong> is coming up in <strong>${daysDiff} day${daysDiff > 1 ? 's' : ''}</strong>.</p>
+                            <p>Make sure you have everything ready for check-in.</p>
+                            <a href="${baseUrl}/profile" class="btn">View Reservation</a>
+                        </div>
+                        <div class="footer">
+                            <p>&copy; 2026 WanderLust Inc. | Automated Travel Reminders</p>
+                        </div>
+                    </div>
+                </body>
+            </html>
+        `,
+    };
 
+    await dispatchEmail(msg);
+};
 
-
-module.exports.sendPasswordResetEmail = async (user, host, token) => {
-    const resetUrl = `http://${host}/reset/${token}`;
-    console.log(`✉️ Processing Password Reset email for: ${user.email}`);
+module.exports.sendPasswordResetEmail = async (user, resetToken, req) => {
+    const baseUrl = getAppUrl(req);
+    const resetUrl = `${baseUrl}/reset/${resetToken}`;
     
     const msg = {
         to: user.email,

@@ -35,11 +35,17 @@ const bookingSchema = new Schema({
     },
 
 
-    stripeSessionId: String,
+    stripeSessionId: {
+        type: String,
+        sparse: true,
+        index: true
+    },
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
+
+bookingSchema.index({ stripeSessionId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model("Booking", bookingSchema);

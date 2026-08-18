@@ -7,6 +7,7 @@
             <div class="card-body p-4 p-md-5">
                 <h3 class="mb-4 fw-bold" style="color: #ff385c;"><i class="fa-solid fa-plus-circle me-2"></i>Create a New Listing</h3>
                 <form method="POST" action="/listings" novalidate class="needs-validation" enctype="multipart/form-data">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="mb-3">  
         <label for="title" class="form-label"> Title</label>
         <input type="text" name="listing[title]" placeholder="Enter Title " class="form-control" required> 

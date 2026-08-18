@@ -11,19 +11,20 @@ module.exports.index = async (req, res) => {
         filter.owner = { $ne: req.user._id };
     }
 
-    if (category && category !== "all") {
-        filter.category = category;
+    if (category && category !== "all" && typeof category === "string") {
+        filter.category = category.trim();
     }
 
-    if (search) {
+    if (typeof search === "string" && search.trim()) {
+        const sanitizedSearch = search.trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         filter.$or = [
-            { title: { $regex: search, $options: "i" } },
-            { location: { $regex: search, $options: "i" } },
-            { country: { $regex: search, $options: "i" } }
+            { title: { $regex: sanitizedSearch, $options: "i" } },
+            { location: { $regex: sanitizedSearch, $options: "i" } },
+            { country: { $regex: sanitizedSearch, $options: "i" } }
         ];
     }
     const allListings = await Listing.find(filter);
-    res.render("listings/index.ejs", { allListings, category, search });
+    res.render("listings/index.ejs", { allListings, category: category || "all", search: search || "" });
 };
 
 

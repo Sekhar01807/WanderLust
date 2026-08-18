@@ -1,9 +1,11 @@
 const express = require("express");
 const router = express.Router({ mergeParams: true });
+const mongoose = require("mongoose");
 const wrapAsync = require("../utils/wrapAsync");
 const { isLoggedIn } = require("../middleware");
 const Message = require("../models/message");
 const Listing = require("../models/listing");
+const User = require("../models/user");
 
 // Render Inbox Page
 router.get("/", isLoggedIn, (req, res) => {
@@ -12,8 +14,6 @@ router.get("/", isLoggedIn, (req, res) => {
 
 // Get Unique Conversations for Inbox
 router.get("/inbox-data", isLoggedIn, wrapAsync(async (req, res) => {
-    // Find all messages involving the user
-    // We group by listing and the other user
     const messages = await Message.find({
         $or: [{ sender: req.user._id }, { receiver: req.user._id }]
     })
@@ -27,10 +27,12 @@ router.get("/inbox-data", isLoggedIn, wrapAsync(async (req, res) => {
     const seen = new Set();
 
     for (let msg of messages) {
+        if (!msg.sender || !msg.receiver) continue;
         const otherUser = msg.sender._id.equals(req.user._id) ? msg.receiver : msg.sender;
         if (!otherUser) continue;
         
-        const key = `${otherUser._id}-${msg.listing?._id}`;
+        const listingId = msg.listing ? msg.listing._id.toString() : "general";
+        const key = `${otherUser._id.toString()}-${listingId}`;
         if (!seen.has(key)) {
             seen.add(key);
             uniqueConvos.push(msg);
@@ -44,56 +46,84 @@ router.get("/inbox-data", isLoggedIn, wrapAsync(async (req, res) => {
 router.get("/:receiverId", isLoggedIn, wrapAsync(async (req, res) => {
     const { receiverId } = req.params;
     const { listingId } = req.query;
-    
-    const messages = await Message.find({
+
+    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+        return res.status(400).json({ success: false, message: "Invalid receiver ID" });
+    }
+
+    let filter = {
         $or: [
             { sender: req.user._id, receiver: receiverId },
             { sender: receiverId, receiver: req.user._id }
-        ],
-        listing: listingId
-    }).sort({ createdAt: 1 }).populate("sender", "username profileImage");
+        ]
+    };
 
-    // Mark as read while fetching
+    if (listingId && mongoose.Types.ObjectId.isValid(listingId)) {
+        filter.listing = listingId;
+    }
+    
+    const messages = await Message.find(filter)
+        .sort({ createdAt: 1 })
+        .populate("sender", "username profileImage");
+
+    // Mark incoming messages as read
     await Message.updateMany(
-        { sender: receiverId, receiver: req.user._id, listing: listingId, isRead: false },
+        { sender: receiverId, receiver: req.user._id, ...(listingId ? { listing: listingId } : {}), isRead: false },
         { $set: { isRead: true } }
     );
 
     res.json(messages);
 }));
 
-const mongoose = require("mongoose");
-
-// Send Message
+// Send Message - Strict Authorization & Content Constraints
 router.post("/", isLoggedIn, wrapAsync(async (req, res) => {
     let { receiverId, listingId, content } = req.body;
     
-    console.log("Incoming Message Data:", { receiverId, listingId, contentLen: content?.length });
-
     if (!receiverId || !listingId || !content) {
-        return res.status(400).json({ message: "Missing required fields (receiverId, listingId, or content)" });
+        return res.status(400).json({ success: false, message: "Missing required fields (receiverId, listingId, or content)" });
     }
 
-    try {
-        // Force conversion to ObjectId to be safe
-        const sender = new mongoose.Types.ObjectId(req.user._id);
-        const receiver = new mongoose.Types.ObjectId(receiverId);
-        const listing = new mongoose.Types.ObjectId(listingId);
-
-        const newMessage = new Message({
-            sender,
-            receiver,
-            listing,
-            content: content.trim()
-        });
-
-        await newMessage.save();
-        console.log("Message Saved Successfully ID:", newMessage._id);
-        res.json(newMessage);
-    } catch (err) {
-        console.error("CRITICAL Message Save Error:", err);
-        res.status(500).json({ message: "Database Error: " + err.message });
+    if (!mongoose.Types.ObjectId.isValid(receiverId) || !mongoose.Types.ObjectId.isValid(listingId)) {
+        return res.status(400).json({ success: false, message: "Invalid receiver or listing identifier" });
     }
+
+    if (req.user._id.toString() === receiverId.toString()) {
+        return res.status(400).json({ success: false, message: "You cannot message yourself" });
+    }
+
+    if (typeof content !== "string" || content.trim().length === 0 || content.trim().length > 2000) {
+        return res.status(400).json({ success: false, message: "Message content must be between 1 and 2000 characters" });
+    }
+
+    const listing = await Listing.findById(listingId);
+    if (!listing) {
+        return res.status(404).json({ success: false, message: "Listing not found" });
+    }
+
+    const receiver = await User.findById(receiverId);
+    if (!receiver) {
+        return res.status(404).json({ success: false, message: "Receiver not found" });
+    }
+
+    // Relationship Authorization:
+    // 1. If sender is host of listing: host can message anyone contacting them or on their listing.
+    // 2. If sender is guest: receiver must be the owner of the listing.
+    const isSenderOwner = listing.owner && listing.owner.equals(req.user._id);
+    const isReceiverOwner = listing.owner && listing.owner.equals(receiver._id);
+
+    if (!isSenderOwner && !isReceiverOwner) {
+        return res.status(403).json({ success: false, message: "Unauthorized: Messages must be directed to the host of this property." });
+    }
+
+    const newMessage = new Message({
+        sender: req.user._id,
+        receiver: receiver._id,
+        listing: listing._id,
+        content: content.trim()
+    });
+
+    await newMessage.save();
+    res.json(newMessage);
 }));
 
 // Delete Entire Conversation
@@ -101,13 +131,22 @@ router.delete("/:receiverId", isLoggedIn, wrapAsync(async (req, res) => {
     const { receiverId } = req.params;
     const { listingId } = req.query;
 
-    await Message.deleteMany({
+    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+        return res.status(400).json({ success: false, message: "Invalid receiver ID" });
+    }
+
+    let filter = {
         $or: [
             { sender: req.user._id, receiver: receiverId },
             { sender: receiverId, receiver: req.user._id }
-        ],
-        listing: listingId
-    });
+        ]
+    };
+
+    if (listingId && mongoose.Types.ObjectId.isValid(listingId)) {
+        filter.listing = listingId;
+    }
+
+    await Message.deleteMany(filter);
 
     res.json({ success: true, message: "Conversation deleted" });
 }));

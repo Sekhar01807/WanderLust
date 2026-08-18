@@ -165,7 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch('/messages', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                },
                 body: JSON.stringify({ 
                     receiverId: currentReceiverId, 
                     listingId: currentListingId, 
@@ -206,7 +209,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result.isConfirmed) {
             try {
                 const res = await fetch(`/messages/${currentReceiverId}?listingId=${currentListingId}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    }
                 });
                 if (res.ok) {
                     Swal.fire({

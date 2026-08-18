@@ -14,6 +14,7 @@
                 </div>
 
                 <form action="/forgot" method="POST" class="needs-validation" novalidate>
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <div class="mb-4">
                         <label for="email" class="form-label fw-bold small text-muted">EMAIL ADDRESS</label>
                         <div class="input-group auth-input-group border">

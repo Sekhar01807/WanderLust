@@ -130,12 +130,6 @@ module.exports.showProfile = async (req, res) => {
     const Booking = require("../models/booking");
     const now = new Date();
 
-    // Automatically mark out-of-date bookings as cancelled in real-time
-    await Booking.updateMany(
-        { checkOut: { $lt: now }, paymentStatus: { $ne: "cancelled" } },
-        { $set: { paymentStatus: "cancelled" } }
-    );
-
     const userBookings = await Booking.find({ user: req.user._id }).populate("listing").sort({ createdAt: -1 });
 
     // Fetch ALL incoming reservations & audit logs for stays owned by this Host
@@ -204,8 +198,6 @@ module.exports.showProfile = async (req, res) => {
     res.render("users/profile.ejs", { user, userListings, reviewsWithListings, userBookings, hostReservations, hostStats, conversations });
 };
 
-
-
 module.exports.updateProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user._id);
@@ -241,7 +233,6 @@ module.exports.updateProfile = async (req, res) => {
         }
 
         await user.save();
-
         
         req.login(user, (err) => {
             if (err) {
@@ -263,70 +254,97 @@ module.exports.renderForgotForm = (req, res) => {
 
 module.exports.forgotPassword = async (req, res) => {
     try {
-        const emailInput = req.body.email ? req.body.email.trim() : "";
+        const emailInput = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
         if (!emailInput) {
             req.flash("error", "Please enter your email address.");
             return res.redirect("/forgot");
         }
 
-        const token = crypto.randomBytes(20).toString("hex");
-        // Case-insensitive email search
-        const user = await User.findOne({ email: { $regex: new RegExp(`^${emailInput.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } });
+        // Case-insensitive exact email lookup
+        const escapedEmail = emailInput.slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const user = await User.findOne({ email: { $regex: new RegExp(`^${escapedEmail}$`, "i") } });
         
-        if (!user) {
-            req.flash("error", `No account associated with "${emailInput}" was found.`);
-            return res.redirect("/forgot");
+        if (user) {
+            const rawToken = crypto.randomBytes(32).toString("hex");
+            const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+            user.resetPasswordToken = hashedToken;
+            user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+            await user.save();
+
+            await sendPasswordResetEmail(user, rawToken, req);
         }
 
-        user.resetPasswordToken = token;
-        user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
-        await user.save();
-
-        const resetUrl = `http://${req.headers.host}/reset/${token}`;
-        console.log("\n==================================================");
-        console.log(`🔑 PASSWORD RESET REQUESTED FOR: ${user.email}`);
-        console.log(`🔗 DIRECT RESET LINK: ${resetUrl}`);
-        console.log("==================================================\n");
-
-        await sendPasswordResetEmail(user, req.headers.host, token);
-        
-        req.flash("success", `An email with password reset instructions has been sent to ${user.email}.`);
+        // Generic response to prevent user enumeration
+        req.flash("success", "If an account with that email exists, password reset instructions have been sent.");
         res.redirect("/forgot");
     } catch (err) {
         console.error("❌ Forgot Password Error:", err.message);
-        req.flash("error", "Something went wrong while requesting password reset: " + err.message);
+        req.flash("error", "Something went wrong while requesting password reset. Please try again.");
         res.redirect("/forgot");
     }
 };
 
-
 module.exports.renderResetForm = async (req, res) => {
-    const user = await User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } });
+    const rawToken = req.params.token;
+    if (!rawToken || typeof rawToken !== "string") {
+        req.flash("error", "Password reset token is invalid or has expired.");
+        return res.redirect("/forgot");
+    }
+
+    const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const user = await User.findOne({ 
+        resetPasswordToken: hashedToken, 
+        resetPasswordExpires: { $gt: Date.now() } 
+    });
+
     if (!user) {
         req.flash("error", "Password reset token is invalid or has expired.");
         return res.redirect("/forgot");
     }
-    res.render("users/reset.ejs", { token: req.params.token });
+    res.render("users/reset.ejs", { token: rawToken });
 };
 
 module.exports.resetPassword = async (req, res) => {
-    const user = await User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } });
+    const rawToken = req.params.token;
+    if (!rawToken || typeof rawToken !== "string") {
+        req.flash("error", "Password reset token is invalid or has expired.");
+        return res.redirect("/forgot");
+    }
+
+    const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const user = await User.findOne({ 
+        resetPasswordToken: hashedToken, 
+        resetPasswordExpires: { $gt: Date.now() } 
+    });
+
     if (!user) {
         req.flash("error", "Password reset token is invalid or has expired.");
         return res.redirect("/forgot");
     }
 
-    if (req.body.password === req.body.confirm) {
-        await user.setPassword(req.body.password);
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpires = undefined;
-        await user.save();
-        req.login(user, (err) => {
-            req.flash("success", "Success! Your password has been changed.");
-            res.redirect("/listings");
-        });
-    } else {
-        req.flash("error", "Passwords do not match.");
-        res.redirect("back");
+    const { password, confirm } = req.body;
+    if (!password || !confirm || password !== confirm) {
+        req.flash("error", "Passwords do not match or are invalid.");
+        return res.redirect(`/reset/${rawToken}`);
     }
+
+    if (password.length < 6) {
+        req.flash("error", "Password must be at least 6 characters long.");
+        return res.redirect(`/reset/${rawToken}`);
+    }
+
+    await user.setPassword(password);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    req.login(user, (err) => {
+        if (err) {
+            req.flash("success", "Password changed successfully. Please log in.");
+            return res.redirect("/login");
+        }
+        req.flash("success", "Success! Your password has been changed.");
+        res.redirect("/listings");
+    });
 };
