@@ -39,13 +39,15 @@
         }
         .landing-nav.scrolled .logo { color: #e63946; }
         .landing-nav .logo i { margin-right: 0.5rem; }
-        .nav-links a {
+        .nav-links a, .nav-links button.link-btn {
             color: rgba(255,255,255,0.9); text-decoration: none;
             margin-left: 2rem; font-weight: 500; font-size: 0.95rem;
             transition: color 0.3s;
+            background: none; border: none; cursor: pointer; padding: 0;
+            display: inline-block;
         }
-        .landing-nav.scrolled .nav-links a { color: #333; }
-        .nav-links a:hover { color: #e63946; }
+        .landing-nav.scrolled .nav-links a, .landing-nav.scrolled .nav-links button.link-btn { color: #333; }
+        .nav-links a:hover, .nav-links button.link-btn:hover { color: #e63946; }
         .btn-nav {
             background: #e63946; color: #fff !important; padding: 0.5rem 1.5rem;
             border-radius: 50px; font-weight: 600;
@@ -193,7 +195,10 @@
             <a href="/listings">Explore</a>
             <% if(typeof currUser !== 'undefined' && currUser){ %>
                 <a href="/listings/new">Add Listing</a>
-                <a href="/logout">Logout</a>
+                <form action="/logout" method="POST" style="display: inline; margin: 0; padding: 0;">
+                    <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+                    <button type="submit" class="link-btn">Logout</button>
+                </form>
             <% } else { %>
                 <a href="/login">Login</a>
                 <a href="/signup" class="btn-nav">Sign Up</a>

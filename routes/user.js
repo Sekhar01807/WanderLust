@@ -53,7 +53,14 @@ router
 
 
 
-router.get("/logout", logout);
+// Logout route - strictly POST with CSRF protection
+router.post("/logout", isLoggedIn, logout);
+
+// Safe redirect if a user hits GET /logout directly
+router.get("/logout", (req, res) => {
+    req.flash("error", "Logout must be submitted via a secure POST request.");
+    res.redirect("/listings");
+});
 
 // Wishlist
 router.get("/wishlist", isLoggedIn, wrapAsync(showWishlist));

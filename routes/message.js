@@ -126,29 +126,47 @@ router.post("/", isLoggedIn, wrapAsync(async (req, res) => {
     res.json(newMessage);
 }));
 
-// Delete Entire Conversation
+// Delete Scoped Conversation - Strict Relationship Authorization & Listing Verification
 router.delete("/:receiverId", isLoggedIn, wrapAsync(async (req, res) => {
     const { receiverId } = req.params;
-    const { listingId } = req.query;
+    const listingId = req.query.listingId || req.body.listingId;
 
     if (!mongoose.Types.ObjectId.isValid(receiverId)) {
         return res.status(400).json({ success: false, message: "Invalid receiver ID" });
     }
 
-    let filter = {
+    if (!listingId || !mongoose.Types.ObjectId.isValid(listingId)) {
+        return res.status(400).json({ success: false, message: "Valid listing ID is required to scope conversation deletion" });
+    }
+
+    const listing = await Listing.findById(listingId);
+    if (!listing) {
+        return res.status(404).json({ success: false, message: "Listing not found" });
+    }
+
+    // Relationship Authorization:
+    // Requester must be either the owner/host of the listing or the guest messaging the host
+    const isUserOwner = listing.owner && listing.owner.equals(req.user._id);
+    const isOtherPartyOwner = listing.owner && listing.owner.equals(receiverId);
+
+    if (!isUserOwner && !isOtherPartyOwner) {
+        return res.status(403).json({ 
+            success: false, 
+            message: "Unauthorized: You can only delete conversations associated with your own listings or hosts you interact with." 
+        });
+    }
+
+    const filter = {
+        listing: listing._id,
         $or: [
             { sender: req.user._id, receiver: receiverId },
             { sender: receiverId, receiver: req.user._id }
         ]
     };
 
-    if (listingId && mongoose.Types.ObjectId.isValid(listingId)) {
-        filter.listing = listingId;
-    }
+    const result = await Message.deleteMany(filter);
 
-    await Message.deleteMany(filter);
-
-    res.json({ success: true, message: "Conversation deleted" });
+    res.json({ success: true, message: "Conversation deleted", deletedCount: result.deletedCount });
 }));
 
 module.exports = router;

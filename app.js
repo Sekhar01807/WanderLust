@@ -60,6 +60,11 @@ async function main() {
     await mongoose.connect(dbUrl);
 }
 
+const webhookRouter = require("./routes/webhook.js");
+
+// Webhook endpoint (Raw body parsing for Stripe cryptographic signature verification)
+app.use("/webhook", webhookRouter);
+
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({ extended: true }));
@@ -102,16 +107,17 @@ app.use("/signup", limiter);
 app.use("/forgot", passwordResetLimiter);
 app.use("/reset", passwordResetLimiter);
 
-// Session Secret Validation - Fail closed in production
+// Session Secret Validation - Fail closed in production, generate secure random in dev
+const crypto = require("crypto");
 const isProduction = process.env.NODE_ENV === "production";
 const sessionSecret = process.env.SECRET;
 if (!sessionSecret) {
     if (isProduction) {
         throw new Error("CRITICAL SECURITY ERROR: 'SECRET' environment variable must be set in production mode.");
     }
-    console.warn("⚠️ WARNING: 'SECRET' environment variable is not set. Using temporary fallback in development.");
+    console.warn("⚠️ WARNING: 'SECRET' environment variable is not set. Generating ephemeral random secret for development session store.");
 }
-const secretToUse = sessionSecret || "dev-insecure-session-secret-fallback";
+const secretToUse = sessionSecret || crypto.randomBytes(32).toString("hex");
 
 let MongoStore = require("connect-mongo");
 if (typeof MongoStore !== "function" && MongoStore.default) {

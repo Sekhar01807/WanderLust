@@ -40,6 +40,10 @@ const bookingSchema = new Schema({
         sparse: true,
         index: true
     },
+    expiresAt: {
+        type: Date,
+        index: true
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -47,5 +51,6 @@ const bookingSchema = new Schema({
 });
 
 bookingSchema.index({ stripeSessionId: 1 }, { unique: true, sparse: true });
+bookingSchema.index({ listing: 1, paymentStatus: 1, checkIn: 1, checkOut: 1 });
 
 module.exports = mongoose.model("Booking", bookingSchema);

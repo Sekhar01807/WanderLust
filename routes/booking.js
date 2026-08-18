@@ -4,7 +4,8 @@ const wrapAsync = require("../utils/wrapAsync");
 const { isLoggedIn, validateBooking } = require("../middleware");
 const Listing = require("../models/listing");
 const Booking = require("../models/booking");
-const { sendBookingEmail, sendHostBookingNotificationEmail, sendCancellationEmail, sendWaitlistAvailableEmail } = require("../utils/emailService");
+const { sendCancellationEmail, sendWaitlistAvailableEmail } = require("../utils/emailService");
+const { fulfillBooking } = require("../utils/bookingFulfillment");
 const { getAppUrl } = require("../utils/appUrl");
 
 // Stripe Initialization with Safety Check
@@ -45,13 +46,16 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
         return res.redirect(`/listings/${id}`);
     }
 
-    // Double-Booking Prevention: Check if listing is already booked for requested dates
+    // Double-Booking Prevention: Check if listing is already booked or actively held
+    const now = new Date();
     const overlappingBooking = await Booking.findOne({
         listing: id,
-        paymentStatus: "paid",
         $or: [
-            { checkIn: { $lt: reqCheckOut }, checkOut: { $gt: reqCheckIn } }
-        ]
+            { paymentStatus: "paid" },
+            { paymentStatus: "pending", expiresAt: { $gt: now } }
+        ],
+        checkIn: { $lt: reqCheckOut },
+        checkOut: { $gt: reqCheckIn }
     });
 
     if (overlappingBooking) {
@@ -63,7 +67,7 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
             checkOut: reqCheckOut
         });
 
-        req.flash("error", "⚠️ Sorry, this property is already booked for your selected dates! We have saved your interest and will email you instantly if these dates become available.");
+        req.flash("error", "⚠️ Sorry, this property is already booked or currently reserved by another guest for your selected dates! We have saved your interest and will email you instantly if these dates become available.");
         return res.redirect(`/listings/${id}`);
     }
 
@@ -106,6 +110,43 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
             }
         });
 
+        // Create 15-minute temporary reservation hold linked to Stripe Session ID
+        const pendingHold = new Booking({
+            listing: id,
+            user: req.user._id,
+            checkIn: reqCheckIn,
+            checkOut: reqCheckOut,
+            guests: guestsNum,
+            totalPrice: amount,
+            paymentStatus: "pending",
+            stripeSessionId: session.id,
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15-minute hold
+        });
+        await pendingHold.save();
+
+        // Concurrency collision check: ensure no competing active booking occurred simultaneously
+        const concurrentCollision = await Booking.findOne({
+            _id: { $ne: pendingHold._id },
+            listing: id,
+            $or: [
+                { paymentStatus: "paid" },
+                { paymentStatus: "pending", expiresAt: { $gt: new Date() } }
+            ],
+            checkIn: { $lt: reqCheckOut },
+            checkOut: { $gt: reqCheckIn }
+        });
+
+        if (concurrentCollision) {
+            await Booking.findByIdAndDelete(pendingHold._id);
+            try {
+                await stripe.checkout.sessions.expire(session.id);
+            } catch (expireErr) {
+                // Ignore expiration error if already closed
+            }
+            req.flash("error", "⚠️ These dates were just reserved by another guest. Please choose alternative dates.");
+            return res.redirect(`/listings/${id}`);
+        }
+
         res.redirect(303, session.url);
     } catch (err) {
         console.error("❌ STRIPE API ERROR:", err.message);
@@ -130,7 +171,7 @@ router.get("/success", isLoggedIn, wrapAsync(async (req, res) => {
         return res.redirect(`/listings/${id}`);
     }
 
-    const { checkIn, checkOut, guests, userId: sessionUserId, listingId: sessionListingId } = session.metadata || {};
+    const { userId: sessionUserId, listingId: sessionListingId } = session.metadata || {};
 
     // Strictly verify session belongs to authenticated user and this listing
     if (sessionUserId !== req.user._id.toString()) {
@@ -143,67 +184,24 @@ router.get("/success", isLoggedIn, wrapAsync(async (req, res) => {
         return res.redirect(`/listings/${id}`);
     }
 
-    // Idempotency: Check if booking was already created for this Stripe Session
-    const existingBooking = await Booking.findOne({ stripeSessionId: session.id });
-    if (existingBooking) {
+    // Execute authoritative, idempotent booking fulfillment
+    const fulfillment = await fulfillBooking(session, req);
+
+    if (!fulfillment.success) {
+        if (fulfillment.conflict) {
+            req.flash("error", "⚠️ Another guest completed reservation for these dates just before you. Your payment was captured and our support team will process a full refund or rebooking immediately.");
+        } else {
+            req.flash("error", fulfillment.message || "Unable to complete reservation. Please contact support.");
+        }
+        return res.redirect(`/listings/${id}`);
+    }
+
+    if (fulfillment.alreadyFulfilled) {
         req.flash("success", "Your booking is confirmed! 🎉");
-        return res.redirect(`/listings/${id}`);
+    } else {
+        req.flash("success", "Booking confirmed and payment successful! 🎉 Confirmation email sent to you and the host.");
     }
-
-    const reqCheckIn = new Date(checkIn);
-    const reqCheckOut = new Date(checkOut);
-
-    // Concurrency / Race condition check: Ensure no overlapping paid booking was confirmed in the interim
-    const raceOverlappingBooking = await Booking.findOne({
-        listing: id,
-        paymentStatus: "paid",
-        $or: [
-            { checkIn: { $lt: reqCheckOut }, checkOut: { $gt: reqCheckIn } }
-        ]
-    });
-
-    if (raceOverlappingBooking) {
-        // Handle double-booking race condition: record booking as conflict/failed for refund
-        const conflictBooking = new Booking({
-            listing: id,
-            user: req.user._id,
-            checkIn: reqCheckIn,
-            checkOut: reqCheckOut,
-            guests: parseInt(guests, 10),
-            totalPrice: session.amount_total / 100,
-            paymentStatus: "failed",
-            stripeSessionId: session.id
-        });
-        await conflictBooking.save();
-
-        req.flash("error", "⚠️ Another guest completed reservation for these dates just before you. Your payment was captured and our support team will process a full refund or rebooking immediately.");
-        return res.redirect(`/listings/${id}`);
-    }
-
-    const listing = await Listing.findById(id).populate("owner");
     
-    const booking = new Booking({
-        listing: id,
-        user: req.user._id,
-        checkIn: reqCheckIn,
-        checkOut: reqCheckOut,
-        guests: parseInt(guests, 10),
-        totalPrice: session.amount_total / 100,
-        paymentStatus: "paid",
-        stripeSessionId: session.id
-    });
-
-    await booking.save();
-    
-    // 1. Send confirmation email to Guest
-    await sendBookingEmail(req.user, booking, listing, req);
-    
-    // 2. Send notification email to Host (Listing Owner)
-    if (listing && listing.owner && listing.owner.email) {
-        await sendHostBookingNotificationEmail(listing.owner, req.user, booking, listing, req);
-    }
-
-    req.flash("success", "Booking confirmed and payment successful! 🎉 Confirmation email sent to you and the host.");
     res.redirect(`/listings/${id}`);
 }));
 

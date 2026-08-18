@@ -30,23 +30,24 @@ module.exports.signup = async (req, res, next) => {
 
         const fullPhoneNumber = `${countryCode} ${phoneNumber}`;
 
+        const genericSignupErrorMessage = "Unable to register account with the provided details. If you already have an account, please log in.";
+
         // Check if an account with this email address already exists
         const existingEmail = await User.findOne({ email: { $regex: new RegExp(`^${email.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } });
         if (existingEmail) {
-            req.flash("error", `An account with the email "${email}" already exists. Please log in instead.`);
+            req.flash("error", genericSignupErrorMessage);
             return res.redirect("/signup");
         }
 
-        // Check if an account with this mobile number already exists (No repeats!)
+        // Check if an account with this mobile number already exists
         const existingPhone = await User.findOne({ $or: [{ phoneNumber: fullPhoneNumber }, { phoneNumber: phoneNumber }] });
         if (existingPhone) {
-            req.flash("error", `An account with the mobile number "${fullPhoneNumber}" is already registered. Please log in instead.`);
+            req.flash("error", genericSignupErrorMessage);
             return res.redirect("/signup");
         }
 
         const newUser = new User({ email, username, phoneNumber: fullPhoneNumber, role, isVerified: true });
         const registeredUser = await User.register(newUser, password);
-
 
         req.login(registeredUser, async (err) => {
             if (err) {
@@ -59,7 +60,11 @@ module.exports.signup = async (req, res, next) => {
             res.redirect(redirectUrl);
         });
     } catch (e) {
-        req.flash("error", e.message);
+        if (e.name === "UserExistsError" || e.code === 11000) {
+            req.flash("error", "Unable to register account with the provided details. If you already have an account, please log in.");
+        } else {
+            req.flash("error", e.message || "Registration failed. Please try again.");
+        }
         res.redirect("/signup");
     }
 };

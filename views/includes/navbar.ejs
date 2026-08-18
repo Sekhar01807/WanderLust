@@ -100,7 +100,14 @@
                    <li><a class="dropdown-item py-2" href="/profile"><i class="fa-solid fa-user me-2"></i> <b>My Profile</b></a></li>
                    <li><a class="dropdown-item py-2" href="/messages"><i class="fa-solid fa-message me-2"></i> <b>Messages</b></a></li>
                    <li><hr class="dropdown-divider"></li>
-                   <li><a class="dropdown-item text-danger py-2" href="/logout"><i class="fa-solid fa-right-from-bracket me-2"></i> Log Out</a></li>
+                   <li>
+                       <form action="/logout" method="POST" class="m-0 p-0">
+                           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                           <button type="submit" class="dropdown-item text-danger py-2 border-0 bg-transparent w-100 text-start">
+                               <i class="fa-solid fa-right-from-bracket me-2"></i> Log Out
+                           </button>
+                       </form>
+                   </li>
                </ul>
            </div>
         <% } %>

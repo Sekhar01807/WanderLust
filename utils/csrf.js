@@ -19,6 +19,12 @@ function csrfProtection(req, res, next) {
 
     res.locals.csrfToken = req.session.csrfToken;
 
+    // Webhook endpoints receive server-to-server cryptographically signed payloads and bypass session CSRF
+    const path = req.originalUrl || req.path || req.url || "";
+    if (path.startsWith("/webhook")) {
+        return next();
+    }
+
     // Safe HTTP methods do not require CSRF validation
     const safeMethods = ["GET", "HEAD", "OPTIONS"];
     if (safeMethods.includes(req.method.toUpperCase())) {
