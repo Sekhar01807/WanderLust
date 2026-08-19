@@ -78,29 +78,33 @@
     if (form) {
         const inputs = form.querySelectorAll('input[required]');
 
+        function updateInputState(input) {
+            const group = input.closest('.auth-input-group');
+            const parent = input.closest('.mb-3, .mb-4');
+            const feedback = parent ? parent.querySelector('.invalid-feedback') : null;
+
+            if (!input.value.trim()) {
+                input.classList.add('is-invalid');
+                if (group) group.classList.add('border-danger');
+                if (feedback) feedback.classList.add('d-block');
+                return false;
+            } else {
+                input.classList.remove('is-invalid');
+                if (group) group.classList.remove('border-danger');
+                if (feedback) feedback.classList.remove('d-block');
+                return true;
+            }
+        }
+
         inputs.forEach(input => {
-            input.addEventListener('input', () => {
-                const group = input.closest('.auth-input-group');
-                if (input.value.trim() === '') {
-                    input.classList.add('is-invalid');
-                    if (group) group.classList.add('border-danger');
-                } else {
-                    input.classList.remove('is-invalid');
-                    input.classList.remove('is-valid');
-                    if (group) group.classList.remove('border-danger');
-                }
-            });
+            input.addEventListener('input', () => updateInputState(input));
         });
 
         form.addEventListener('submit', (e) => {
             let hasError = false;
             inputs.forEach(input => {
-                const group = input.closest('.auth-input-group');
-                if (!input.value.trim()) {
-                    input.classList.add('is-invalid');
-                    if (group) group.classList.add('border-danger');
-                    hasError = true;
-                }
+                const isValid = updateInputState(input);
+                if (!isValid) hasError = true;
             });
             if (hasError) {
                 e.preventDefault();

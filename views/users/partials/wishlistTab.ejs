@@ -13,10 +13,10 @@
                     <a href="/listings/<%= listing._id %>" class="listing-link">
                         <img src="<%= listing.image ? listing.image.url : '' %>" class="card-img-top" alt="<%= listing.title %>" style="height: 15rem; object-fit: cover;">
                     </a>
-                    <form method="POST" action="/wishlist/<%= listing._id %>" class="wishlist-btn-form">
+                    <form method="POST" action="/wishlist/<%= listing._id %>?_csrf=<%= csrfToken %>" class="wishlist-btn-form">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <button type="submit" class="wishlist-btn" title="Remove from Wishlist">
-                            <i class="fa-solid fa-heart" style="color:crimson;"></i>
+                            <i class="fa-solid fa-heart" style="color: #ff385c !important;"></i>
                         </button>
                     </form>
                     <div class="card-body p-3">

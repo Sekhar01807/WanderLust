@@ -190,14 +190,24 @@
 
     <!-- Navbar -->
     <nav class="landing-nav" id="landingNav">
-        <a href="/" class="logo d-inline-flex align-items-center gap-2"><img src="/logo.svg" alt="Logo" style="height: 36px; width: 36px;">WanderLust</a>
-        <div class="nav-links">
+        <a href="/" class="logo d-inline-flex align-items-center gap-2 text-decoration-none">
+            <i class="fa-regular fa-compass fa-lg" style="color: #ff385c;"></i>
+            <span>WanderLust</span>
+        </a>
+        <div class="nav-links d-flex align-items-center gap-3">
             <a href="/listings">Explore</a>
-            <% if(typeof currUser !== 'undefined' && currUser){ %>
-                <a href="/listings/new">Add Listing</a>
-                <form action="/logout" method="POST" style="display: inline; margin: 0; padding: 0;">
+            <% if (typeof currUser !== 'undefined' && currUser) { %>
+                <a href="/profile" class="d-inline-flex align-items-center gap-2 text-decoration-none text-white">
+                    <% if (currUser.profileImage && currUser.profileImage.url && !currUser.profileImage.url.includes("dwy7q5x2g") && currUser.profileImage.url !== "") { %>
+                        <img src="<%= currUser.profileImage.url %>" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover; border: 2px solid #ff385c;" alt="<%= currUser.username %>">
+                    <% } else { %>
+                        <i class="fa-solid fa-circle-user fs-4 text-white"></i>
+                    <% } %>
+                    <span class="fw-semibold">@<%= currUser.username %></span>
+                </a>
+                <form action="/logout?_csrf=<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>" method="POST" style="display: inline; margin: 0; padding: 0;">
                     <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
-                    <button type="submit" class="link-btn">Logout</button>
+                    <button type="submit" class="btn-nav" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 0.45rem 1rem;">Logout</button>
                 </form>
             <% } else { %>
                 <a href="/login">Login</a>
@@ -336,22 +346,27 @@
         </div>
     </section>
 
-    <!-- CTA -->
-    <section class="cta">
-        <h2>Ready to Start Your Journey?</h2>
-        <p>Join thousands of travelers who trust WanderLust for unforgettable experiences.</p>
-        <a href="/signup" class="btn-hero"><i class="fa-solid fa-user-plus me-2"></i>Create Free Account</a>
+        <% if (typeof currUser !== 'undefined' && currUser) { %>
+            <a href="/listings" class="btn-hero"><i class="fa-solid fa-compass me-2"></i>Explore All Hotels</a>
+        <% } else { %>
+            <a href="/signup" class="btn-hero"><i class="fa-solid fa-user-plus me-2"></i>Create Free Account</a>
+        <% } %>
     </section>
 
     <!-- Footer -->
-    <footer class="landing-footer">
-        <div>
-            <a href="#"><i class="fa-brands fa-facebook"></i></a>
-            <a href="#"><i class="fa-brands fa-instagram"></i></a>
-            <a href="#"><i class="fa-brands fa-x-twitter"></i></a>
-            <a href="#"><i class="fa-brands fa-linkedin"></i></a>
+    <footer class="landing-footer text-center py-4">
+        <div class="mb-3 d-flex justify-content-center align-items-center gap-3">
+            <a href="https://www.instagram.com/sekhar_redde_/" target="_blank" rel="noopener noreferrer" class="text-white-50 fs-5" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+            <a href="https://www.linkedin.com/in/sekhar-reddy-408560281/" target="_blank" rel="noopener noreferrer" class="text-white-50 fs-5" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="mailto:sekharsekhar1919@gmail.com" class="text-white-50 fs-5" title="Email Support"><i class="fa-solid fa-envelope"></i></a>
+            <a href="tel:+917995511936" class="text-white-50 fs-5" title="Phone Support"><i class="fa-solid fa-phone"></i></a>
         </div>
-        <div class="copyright">&copy; 2026 WanderLust Private Limited. All rights reserved.</div>
+        <div class="mb-2">
+            <a href="/privacy" class="text-white-50 text-decoration-none me-3">Privacy</a>
+            <a href="/terms" class="text-white-50 text-decoration-none me-3">Terms</a>
+            <a href="mailto:sekharsekhar1919@gmail.com" class="text-decoration-none fw-bold" style="color: #ff385c !important;"><i class="fa-solid fa-headset me-1"></i>Support</a>
+        </div>
+        <div class="copyright text-white-50">&copy; <%= new Date().getFullYear() %> WanderLust Private Limited. All rights reserved.</div>
     </footer>
 
     <script>

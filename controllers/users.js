@@ -95,7 +95,11 @@ module.exports.logout = (req, res, next) => {
 module.exports.toggleWishlist = async (req, res) => {
     let { id } = req.params;
     let user = await User.findById(req.user._id);
-    const idx = user.wishlist.indexOf(id);
+    if (!user.wishlist) {
+        user.wishlist = [];
+    }
+    const targetId = id.toString();
+    const idx = user.wishlist.findIndex(w => (w ? w.toString() : '') === targetId);
     let wishlisted;
     if (idx === -1) {
         user.wishlist.push(id);
@@ -106,11 +110,16 @@ module.exports.toggleWishlist = async (req, res) => {
     }
     await user.save();
 
-    if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest' || req.headers.accept?.includes('application/json')) {
-        return res.json({ wishlisted });
+    if (req.user) {
+        req.user.wishlist = user.wishlist;
+    }
+
+    const isAjax = req.xhr || req.get('X-Requested-With') === 'XMLHttpRequest' || req.get('Accept')?.includes('application/json');
+    if (isAjax) {
+        return res.json({ success: true, wishlisted, count: user.wishlist.length });
     }
     req.flash("success", wishlisted ? "Added to Wishlist ❤️" : "Removed from Wishlist");
-    res.redirect("back");
+    res.redirect(req.get('Referrer') || "/listings");
 };
 
 module.exports.showWishlist = async (req, res) => {

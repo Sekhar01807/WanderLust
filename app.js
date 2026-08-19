@@ -41,7 +41,7 @@ const dbUrl = process.env.ATLASDB_URL;
 
 main()
     .then(() => {
-        // Connected to MongoDB
+        console.log(" Connected to MongoDB");
     })
     .catch((err) => {
         console.error("MongoDB Connection Error:", err);
@@ -69,7 +69,12 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(mongoSanitize());
+// NoSQL injection protection (Express 5: req.query is read-only, so sanitize body/params only)
+app.use((req, res, next) => {
+    if (req.body) req.body = mongoSanitize.sanitize(req.body);
+    if (req.params) req.params = mongoSanitize.sanitize(req.params);
+    next();
+});
 app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);
 app.use(express.static(path.join(__dirname, "/public")));
@@ -235,9 +240,9 @@ app.use((req, res, next) => {
     next();
 });
 
-// Root route redirects to listings
+// Landing page
 app.get("/", (req, res) => {
-    res.redirect("/listings");
+    res.render("listings/landing.ejs");
 });
 
 const bookingRouter = require("./routes/booking.js");
@@ -258,7 +263,8 @@ app.use("/", userRouter);
 app.get('/favicon.ico', (req, res) => res.redirect('/favicon.svg'));
 app.get(/^\/\.well-known\/.*/, (req, res) => res.status(204).end());
 
-app.all(/(.*)/, (req, res, next) => {
+// Express 5 catch-all for unmatched routes
+app.use((req, res, next) => {
     next(new ExpressError(404, "Page not Found !"));
 });
 

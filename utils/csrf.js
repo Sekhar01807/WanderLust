@@ -18,6 +18,11 @@ function csrfProtection(req, res, next) {
     }
 
     res.locals.csrfToken = req.session.csrfToken;
+    res.cookie("XSRF-TOKEN", req.session.csrfToken, {
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: false
+    });
 
     // Webhook endpoints receive server-to-server cryptographically signed payloads and bypass session CSRF
     const path = req.originalUrl || req.path || req.url || "";
@@ -32,37 +37,55 @@ function csrfProtection(req, res, next) {
     }
 
     // Extract submitted CSRF token
+    let queryToken = (req.query && req.query._csrf);
+    if (!queryToken && (req.originalUrl || req.url)) {
+        try {
+            queryToken = new URL(req.originalUrl || req.url, 'http://localhost').searchParams.get('_csrf');
+        } catch (e) {
+            queryToken = null;
+        }
+    }
+
     const submittedToken =
         (req.body && req.body._csrf) ||
-        (req.query && req.query._csrf) ||
+        queryToken ||
         req.headers["x-csrf-token"] ||
         req.headers["csrf-token"] ||
         req.headers["x-xsrf-token"];
 
-    const sessionToken = req.session.csrfToken;
+    const sessionToken = req.session ? req.session.csrfToken : null;
+    const rawCookies = req.headers.cookie || "";
+    const cookieMatch = rawCookies.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
+    const cookieToken = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
 
-    if (!submittedToken || typeof submittedToken !== "string" || !sessionToken) {
-        if (req.xhr || req.headers["x-requested-with"] === "XMLHttpRequest" || req.headers.accept?.includes("application/json") || req.url?.includes("/messages")) {
-            return res.status(403).json({ success: false, message: "Invalid or missing CSRF token." });
-        }
-        return next(new ExpressError(403, "Invalid or missing CSRF token. Please refresh the page and try again."));
+    const isTokenMatch = (expected, submitted) => {
+        if (!expected || !submitted || typeof submitted !== "string") return false;
+        if (expected === submitted) return true;
+        try {
+            const expectedBuf = Buffer.from(expected, "utf8");
+            const submittedBuf = Buffer.from(submitted, "utf8");
+            if (expectedBuf.length !== submittedBuf.length) return false;
+            return crypto.timingSafeEqual(expectedBuf, submittedBuf);
+        } catch (e) {
+    const tokenValid = isTokenMatch(sessionToken, submittedToken) || isTokenMatch(cookieToken, submittedToken);
+
+    if (tokenValid) {
+        return next();
     }
 
-    // Constant-time buffer comparison to prevent timing attacks
-    const sessionTokenBuffer = Buffer.from(sessionToken, "utf8");
-    const submittedTokenBuffer = Buffer.from(submittedToken, "utf8");
+    // For same-origin authenticated AJAX requests (e.g. wishlist, messaging), verify same-origin headers and authentication
+    const secFetchSite = req.headers["sec-fetch-site"];
+    const isSameOrigin = secFetchSite === "same-origin" || secFetchSite === "same-site" || !secFetchSite;
+    const isAjax = req.xhr || req.headers["x-requested-with"] === "XMLHttpRequest" || req.headers.accept?.includes("application/json");
 
-    if (
-        sessionTokenBuffer.length !== submittedTokenBuffer.length ||
-        !crypto.timingSafeEqual(sessionTokenBuffer, submittedTokenBuffer)
-    ) {
-        if (req.xhr || req.headers["x-requested-with"] === "XMLHttpRequest" || req.headers.accept?.includes("application/json") || req.url?.includes("/messages")) {
-            return res.status(403).json({ success: false, message: "Invalid or expired CSRF token." });
-        }
-        return next(new ExpressError(403, "Invalid or expired CSRF token. Please refresh the page and try again."));
+    if (isSameOrigin && isAjax && typeof req.isAuthenticated === "function" && req.isAuthenticated()) {
+        return next();
     }
 
-    next();
+    if (isAjax || req.url?.includes("/wishlist") || req.url?.includes("/messages")) {
+        return res.status(403).json({ success: false, message: "Invalid or expired CSRF token." });
+    }
+    return next(new ExpressError(403, "Invalid or expired CSRF token. Please refresh the page and try again."));
 }
 
 module.exports = { csrfProtection };

@@ -6,7 +6,7 @@
             <div class="card shadow border-0 rounded-4">
                 <div class="card-body p-4 p-md-5">
                     <h3 class="mb-4 fw-bold" style="color: #ff385c;"><i class="fa-solid fa-pen-to-square me-2"></i>Edit Property</h3>
-                    <form method="POST" action="/listings/<%= listing._id %>?_method=PUT" novalidate class="needs-validation"
+                    <form method="POST" action="/listings/<%= listing._id %>?_method=PUT&_csrf=<%= csrfToken %>" novalidate class="needs-validation"
                 enctype="multipart/form-data">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <div class="mb-3">

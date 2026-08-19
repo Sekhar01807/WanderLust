@@ -52,9 +52,7 @@ const bookingSchema = new Schema({
         type: Date
     },
     stripeSessionId: {
-        type: String,
-        sparse: true,
-        index: true
+        type: String
     },
     expiresAt: {
         type: Date,

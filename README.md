@@ -6,17 +6,29 @@
 [![Stripe](https://img.shields.io/badge/Stripe-Payments-635BFF.svg)](https://stripe.com/)
 [![Security](https://img.shields.io/badge/Security-Layered--Controls-brightgreen.svg)]()
 
-**WanderLust** is a full-stack hospitality, hotel, and vacation rental platform inspired by Airbnb. Built with Node.js, Express, MongoDB Atlas, and EJS, WanderLust delivers a smooth booking experience, transactional reservation integrity, host analytics, messaging, and layered application security controls.
+**WanderLust** is a full-stack hospitality, hotel, and vacation rental platform inspired by Airbnb. Built with Node.js, Express 5, MongoDB Atlas, and EJS, WanderLust delivers an intuitive booking workflow, per-user persistent wishlists, real-time host analytics, in-app messaging, seamless profile management, and layered application security controls.
 
 ---
 
 ## ✨ Key Features
 
-### 🏡 Stays & Discovery
-- **Explore Listings**: Browse properties across categories (*Beachfront, Cabins, Trending, Arctic, Mountain Chalets, Star Hotels*).
-- **Mapbox Geocoding & Maps**: Interactive maps with address search and location autocomplete.
-- **Dynamic Filtering & Search**: Instant keyword search with regex escaping to prevent ReDoS.
-- **Media Management**: High-resolution image uploads with Cloudinary storage and optimization.
+### 🏡 Stays, Discovery & Landing Experience
+- **Interactive Landing Page (`/`)**: Dedicated hero presentation with curated travel categories, top destinations, and a dynamic navbar that adapts to guest vs authenticated user sessions.
+- **Explore Listings (`/listings`)**: Browse properties across categories (*Beachfront, Cabins, Trending, Arctic, Mountain Chalets, Star Hotels, Iconic Cities*).
+- **Mapbox Geocoding & Dynamic Maps**: Interactive maps with address search and location autocomplete.
+- **Dynamic Filter Bar**: Category filtering with smooth horizontal scroll navigation and auto-centering pills.
+- **Media Management**: High-resolution image uploads with Cloudinary cloud storage and aspect ratio optimization.
+
+### ❤️ Persistent Per-User Wishlist
+- **Individual User Isolation**: Wishlists are stored directly within each user's document in MongoDB Atlas — ensuring every user has their own private, persistent wishlist that remains saved across logouts and logins.
+- **Instant Optimistic UI Toggle**: Tapping the heart on any hotel card fills it completely with solid crimson red (<i class="fa-solid fa-heart" style="color: #ff385c;"></i>) with pulse animation and toast alerts (`"Saved to Wishlist ❤️"`).
+- **Guest Protection**: Prompts unauthenticated visitors to log in before saving items to their wishlist.
+- **Profile Wishlist Hub**: View and manage all saved properties under **Profile &rarr; My Wishlist**.
+
+### 👤 Profile & One-Click Photo Upload
+- **One-Click Camera Badge**: Direct camera button on the circular avatar opens the file picker, live-previews the chosen image, and auto-submits to Cloudinary.
+- **Site-Wide Avatar Propagation**: Updated profile pictures immediately synchronize across the navigation bar, guest reviews, listing host cards, chat headers, and reservation modals.
+- **Clean Profile Details Form**: Dedicated form for updating username, account role (*Traveler / Host*), bio, country, phone number, and languages.
 
 ### 💳 Transactional Booking & Stripe Integration
 - **Best-Effort Reservation Holds & Collision Mitigation**:
@@ -31,17 +43,21 @@
   - Strict **fail-closed** cryptographic signature verification (`stripe.webhooks.constructEvent`) — rejects all unsigned or forged payloads without fallback.
   - Automatic retry signaling: returns `HTTP 500` on any fulfillment failure so Stripe automatically retries event delivery with exponential backoff.
   - Dedicated handling for `checkout.session.completed` (transition from `pending` to `paid` with idempotency checks) and `checkout.session.expired` (hold release).
-- **Automated Refund Failsafe**:
-  - Transactional consistency backed by automated Stripe refunds in the edge case of an unfulfillable conflict.
 - **E-Receipts**: Official digital booking receipts with guest/host access control.
-- **Deduplicated Waitlist System**: Unique compound indexing prevents duplicate waitlist requests for the same user, listing, and date range, notifying guests immediately when reserved dates are freed up.
+- **Deduplicated Waitlist System**: Unique compound indexing prevents duplicate waitlist requests for the same user, listing, and date range.
 
-### 👤 User & Host Ecosystem
+### 📞 Customer Support & Footer Integration
+- **Interactive Support Modal**: Accessible from the footer with direct contact options:
+  - 📞 **Direct Phone / WhatsApp**: `+91 7995511936`
+  - ✉️ **Official Support Email**: `sekharsekhar1919@gmail.com`
+  - 📸 **Instagram**: [`@sekhar_redde_`](https://www.instagram.com/sekhar_redde_/)
+  - 💼 **LinkedIn**: [`Sekhar Reddy`](https://www.linkedin.com/in/sekhar-reddy-408560281/)
+
+### 💬 User & Host Ecosystem
 - **Dual Role Profiles**: Travelers can browse, save wishlists, and reserve; Hosts get an analytics dashboard (earnings, active/cancelled reservations, and audit logs).
 - **Direct Messaging**: In-app messaging between guests and property owners with relationship authorization, scoped conversation deletion, and safe DOM `.textContent` rendering.
-- **Verified Reviews & Ratings**: Strict review creation policy requiring an actual confirmed/completed stay at the property; scoped review deletion verification preventing cross-listing mutations.
-- **Automated Emails**: HTML email notifications via Nodemailer / SendGrid / Mailtrap for bookings, cancellations, refunds, waitlists, and reminders with fail-closed sender controls in production.
-- **Cron Jobs**: Scheduled daily cron tasks for check-in and check-out email reminders.
+- **Verified Reviews & Ratings**: Strict review creation policy requiring an actual completed stay at the property; scoped review deletion verification preventing cross-listing mutations.
+- **Automated Emails & Cron Jobs**: HTML email notifications via Nodemailer / SendGrid / Mailtrap for bookings, cancellations, refunds, waitlists, and daily check-in/check-out reminders.
 
 ---
 
@@ -49,27 +65,23 @@
 
 | Defense Layer | Implementation Details |
 | :--- | :--- |
-| **XSS Prevention (Chat & Views)** | Stored chat messages and user labels rendered using safe DOM `.textContent` and `.replaceChildren()` APIs. Listing metadata in client scripts is isolated inside non-executable `<script type="application/json">` blocks with unicode-escaped angle brackets (`\u003c`, `\u003e`). Zero dynamic `innerHTML` in client scripts. |
+| **Dual Session & XSRF-TOKEN CSRF Defense** | Session-backed CSRF middleware with synchronized `XSRF-TOKEN` cookie verification and same-origin authenticated fetch support to eliminate 403 errors while maintaining strict CSRF defense. |
+| **Express 5 Routing & Sanitization** | Express 5 compatible routing and error handling with safe custom NoSQL query sanitization (`req.body`, `req.params`). |
+| **XSS Prevention (Chat & Views)** | Stored chat messages and user labels rendered using safe DOM `.textContent` and `.replaceChildren()` APIs. Zero dynamic `innerHTML` in client scripts. |
 | **Session Invalidation on Password Reset** | `sessionVersion` tracking on user accounts invalidates all pre-existing authenticated sessions across all devices immediately upon password reset. |
-| **Verified Stay Authorization** | Reviews restricted strictly to guests with confirmed/completed bookings; review deletion middleware validates listing association. |
+| **Verified Stay Authorization** | Reviews restricted strictly to guests with completed bookings (`checkOut <= now`); review deletion validates listing association. |
 | **Paid Booking Refunds & Cancellation** | Full transactional refund handling via Stripe API with persisted database refund audit logs. |
-| **CSRF Protection** | Global session-backed CSRF middleware enforcing token validation on all state-changing verbs (`POST`, `PUT`, `PATCH`, `DELETE`), including `POST /logout`. Webhooks exempted via cryptographic signatures. |
 | **Stripe Webhook Verification** | Strict fail-closed verification rejecting missing configurations (500), missing signatures (400), and invalid signatures (400) with zero unsigned fallback. |
-| **Best-Effort Booking Holds** | Database holds created prior to Stripe session initialization, synchronized with Stripe's 30-minute expiration, backed by post-hold collision checks and automated Stripe refund failsafes. |
 | **Upload Boundaries & MIME Filter** | Multer configured with strict MIME type allowlisting (`JPEG`, `PNG`, `WebP`) and a 5MB per-file boundary limit. |
-| **Fail-Closed Production Configuration** | Canonical `APP_URL` and `FROM_EMAIL` strictly required in production mode to prevent host header poisoning and unconfigured sender fallbacks. |
 | **Account Enumeration Defense** | Generic, timing-safe error messaging on `/signup`, `/login`, and `/forgot` to prevent discovery of registered emails and phone numbers. |
 | **Password Reset Security** | Reset tokens generated via `crypto.randomBytes(32)` and persisted as **SHA-256** hashes with 1-hour expiration. |
-| **Authentication & Sessions** | Passport.js local authentication, secure HTTP-only cookies with `SameSite=Lax`, and MongoDB session store. Ephemeral 256-bit crypto fallback in development; strictly fails closed in production without `SECRET`. |
-| **Injection & Query Sanitization** | `express-mongo-sanitize` middleware prevents NoSQL operator injection; regex inputs are strictly sanitized. |
-| **Rate Limiting** | `express-rate-limit` guards against brute-force attacks on auth and password reset endpoints. |
 | **HTTP Security Headers** | `helmet` configured with strict Content Security Policy (CSP), frame guards, and resource policies. |
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Backend**: Node.js, Express.js (v5)
+- **Backend**: Node.js (v24), Express.js (v5)
 - **Database**: MongoDB Atlas, Mongoose ODM
 - **Templating**: EJS, EJS-Mate
 - **Payments**: Stripe Checkout API & Stripe Webhooks
@@ -99,7 +111,7 @@ npm install
 
 ### 3. Environment Configuration
 
-Create a `.env` file in the root directory (refer to [`.env.example`](file:///c:/Users/SOMA%20SEKHAR/OneDrive/Desktop/Course/Projects/WanderLust/.env.example)):
+Create a `.env` file in the root directory (refer to `.env.example`):
 
 ```env
 # Server Configuration
@@ -110,7 +122,7 @@ APP_URL=http://localhost:8080
 # Database
 ATLASDB_URL=mongodb+srv://<username>:<password>@cluster.mongodb.net/wanderlust?retryWrites=true&w=majority
 
-# Session Security (Required in production)
+# Session Security
 SECRET=your_super_secret_session_key_here
 
 # Cloudinary
@@ -127,15 +139,13 @@ STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
 
 # Email Service
-MAILTRAP_USER=your_mailtrap_user
-MAILTRAP_PASS=your_mailtrap_pass
-SENDGRID_API_KEY=your_sendgrid_api_key
-FROM_EMAIL=notifications@wanderlust.com
+FROM_EMAIL=sekharsekhar1919@gmail.com
+GMAIL_APP_PASSWORD=your_gmail_app_password
 ```
 
 ### 4. Database Seeding (Optional)
 
-To seed initial sample listings into your database:
+To seed sample listings:
 ```bash
 node init/index.js
 ```
@@ -152,47 +162,9 @@ Open [http://localhost:8080](http://localhost:8080) in your browser.
 
 ## 🧪 Automated Testing
 
-WanderLust includes automated test suites covering input schemas, CSRF protections, webhook security, booking hold concurrency, fulfillment consistency, relationship authorization, and security sanitization:
-
+Run the test suite:
 ```bash
 npm test
-```
-
-### Test Coverage:
-- `test/edgeCases.test.js` — Comprehensive edge cases: duplicate webhooks, already fulfilled bookings, expired holds, date overlap boundaries, refund failure handling, and unauthorized message access.
-- `test/webhook.test.js` — Fail-closed signature verification, missing secret/signature, retry status (500), and success (200) handling.
-- `test/fulfillment.test.js` — Idempotent fulfillment, status transitions (`pending` → `paid`), and auto-refund handling.
-- `test/bookingHold.test.js` — Date overlap algorithms, active vs expired hold blocking, 30-minute expiration sync with Stripe `expires_at`, and collision detection.
-- `test/csrf.test.js` — Session CSRF token lifecycle, `POST /logout` enforcement, and webhook exemption.
-- `test/messageAuth.test.js` — Scoped conversation deletion and host/guest authorization.
-- `test/schema.test.js` — Joi validation constraints for listings, reviews, and reservation dates.
-- `test/security.test.js` — SHA-256 deterministic token hashing, ReDoS search escaping, JSON script tag breakout sanitization, upload MIME allowlisting, CSP hardening assertions, and static safe DOM rendering audit.
-- `test/appUrl.test.js` — Multi-environment host resolution and production fail-closed validation.
-
----
-
-## 📁 Project Structure
-
-```
-WanderLust/
-├── controllers/          # Business logic handlers (listings, users, reviews)
-├── init/                 # Database initialization & sample data
-├── models/               # Mongoose schemas (listing, booking, user, message, review, waitlist)
-├── public/               # Static assets (CSS, JS, logos, icons)
-├── routes/               # Express route definitions
-│   ├── booking.js        # Reservation holds, checkout & receipts
-│   ├── listing.js        # Listing discovery & CRUD
-│   ├── message.js        # Scoped chat & deletion
-│   ├── notification.js   # User alerts
-│   ├── review.js         # Ratings & feedback
-│   ├── user.js           # Auth, profile, wishlist, password reset
-│   └── webhook.js        # Stripe server-to-server webhook fulfillment
-├── test/                 # Automated test suites
-├── utils/                # Utilities (bookingFulfillment, csrf, email, cron, error handlers)
-├── views/                # EJS templates (listings, users, messages, layouts)
-├── app.js                # Server entry point & middleware pipeline
-├── package.json          # Dependencies & npm scripts
-└── schema.js             # Joi validation schemas
 ```
 
 ---

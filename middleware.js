@@ -6,6 +6,10 @@ const { listingSchema, reviewSchema, bookingSchema } = require("./schema.js");
 module.exports.isLoggedIn = (req, res, next) => {
     if (!req.isAuthenticated()) {
         req.session.redirectUrl = req.originalUrl;
+        const isAjax = req.xhr || req.get('X-Requested-With') === 'XMLHttpRequest' || req.get('Accept')?.includes('application/json');
+        if (isAjax) {
+            return res.status(401).json({ success: false, message: "Please log in to continue.", redirectUrl: "/login" });
+        }
         req.flash("error", "You must be logged in to proceed.");
         return res.redirect("/login");
     }

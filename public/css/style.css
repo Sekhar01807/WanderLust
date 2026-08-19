@@ -287,6 +287,10 @@ body {
 .wishlist-btn .fa-regular.fa-heart {
     color: #222;
 }
+.wishlist-btn .fa-solid.fa-heart,
+.wishlist-btn i.active-wishlist {
+    color: #ff385c !important;
+}
 
 /* Auth Card & Input Styling */
 .auth-card {

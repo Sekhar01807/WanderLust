@@ -1,21 +1,27 @@
 <!-- Profile Info Card -->
 <div class="card shadow-sm border-0">
     <div class="card-body text-center">
-        <div class="position-relative d-inline-block mb-3" style="cursor: pointer;" onclick="document.getElementById('profileImage').click();">
-            <% if(user.profileImage && user.profileImage.url && !user.profileImage.url.includes("dwy7q5x2g") && user.profileImage.url !== "") { %>
-                <img id="profile-preview" src="<%= user.profileImage.url %>" alt="Profile Image" class="rounded-circle img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;">
-            <% } else { %>
-                <div id="profile-preview-fallback" class="rounded-circle img-thumbnail d-flex justify-content-center align-items-center bg-danger text-white mx-auto" style="width: 150px; height: 150px; font-size: 4rem;">
-                    <%= user.username ? user.username.charAt(0).toUpperCase() : 'U' %>
-                </div>
-                <img id="profile-preview" src="" style="display:none; width: 150px; height: 150px; object-fit: cover;" class="rounded-circle img-thumbnail" alt="Preview">
-            <% } %>
+        <!-- Avatar with Camera Icon Overlay -->
+        <form id="avatarUploadForm" action="/profile?_method=PUT&_csrf=<%= csrfToken %>" method="POST" enctype="multipart/form-data" style="display: inline;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="file" id="avatarFileInput" name="profileImage" accept=".png, .jpg, .jpeg, .webp, image/*" style="display: none;">
             
-            <!-- Hover Edit Overlay -->
-            <div class="position-absolute top-0 start-0 w-100 h-100 rounded-circle d-flex justify-content-center align-items-center profile-overlay" style="background: rgba(0,0,0,0.4); opacity: 0; transition: 0.2s;">
-                <i class="fa-solid fa-camera text-white" style="font-size: 2rem;"></i>
+            <div class="position-relative d-inline-block mb-3" style="cursor: pointer;" id="profileAvatarBadge" title="Click to upload new profile photo">
+                <% if(user.profileImage && user.profileImage.url && !user.profileImage.url.includes("dwy7q5x2g") && user.profileImage.url !== "") { %>
+                    <img id="profile-preview" src="<%= user.profileImage.url %>" alt="Profile Image" class="rounded-circle img-thumbnail shadow-sm" style="width: 150px; height: 150px; object-fit: cover; border: 3px solid #ff385c;">
+                <% } else { %>
+                    <div id="profile-preview-fallback" class="rounded-circle img-thumbnail d-flex justify-content-center align-items-center bg-danger text-white mx-auto shadow-sm" style="width: 150px; height: 150px; font-size: 4rem;">
+                        <%= user.username ? user.username.charAt(0).toUpperCase() : 'U' %>
+                    </div>
+                    <img id="profile-preview" src="" style="display:none; width: 150px; height: 150px; object-fit: cover; border: 3px solid #ff385c;" class="rounded-circle img-thumbnail shadow-sm" alt="Preview">
+                <% } %>
+                
+                <!-- Actionable Camera Icon Badge -->
+                <div class="position-absolute bottom-0 end-0 bg-danger text-white rounded-circle shadow d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; border: 2.5px solid white; transform: translate(5px, 5px);" title="Change Photo">
+                    <i class="fa-solid fa-camera" style="font-size: 1.15rem;"></i>
+                </div>
             </div>
-        </div>
+        </form>
         <h4 class="card-title">@<%= user.username %></h4>
         <% const isHost = (userListings.length > 0 || user.role === 'Host'); %>
         <p class="mb-2"><span class="badge <%= isHost ? 'bg-danger' : 'bg-primary' %> rounded-pill px-3"><%= isHost ? 'Host' : 'Traveler' %></span></p>
@@ -35,8 +41,9 @@
         
         <div id="editProfileSection" style="display: none;" class="mt-3 text-start animate__animated animate__fadeIn">
             <h5 class="mb-3 fw-bold text-center" style="color: #ff385c;">Edit Profile Details</h5>
-            <form action="/profile?_method=PUT" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+            <form action="/profile?_method=PUT&_csrf=<%= csrfToken %>" method="POST" class="needs-validation" novalidate id="profileEditForm">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
                 <div class="mb-3">
                     <label for="username" class="form-label text-muted small fw-bold">Username</label>
                     <input type="text" class="form-control rounded-3" id="username" name="username" value="<%= user.username %>" required>
@@ -73,7 +80,6 @@
                     <label for="languages" class="form-label text-muted small fw-bold">Languages Spoken</label>
                     <input type="text" class="form-control rounded-3" id="languages" name="languages" value="<%= user.languages %>" placeholder="e.g. English, Hindi">
                 </div>
-                <input type="file" id="profileImage" name="profileImage" accept=".png, .jpg, .jpeg, .webp, image/*" style="display: none;">
                 <button type="submit" class="btn btn-danger w-100 py-2 fw-bold rounded-3" style="background-color: #ff385c; border: none;">Save Changes</button>
             </form>
         </div>

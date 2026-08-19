@@ -80,20 +80,47 @@ document.querySelectorAll('#profileTabs .nav-link').forEach(tab => {
     });
 });
 
-// Setup Cropper for Profile Image (Aspect ratio 1:1)
 document.addEventListener("DOMContentLoaded", () => {
-    if (typeof setupImageCropper === 'function') {
-        setupImageCropper('profileImage', 'profile-preview', 1);
+    const avatarBadge = document.getElementById('profileAvatarBadge');
+    const avatarFileInput = document.getElementById('avatarFileInput');
+    const avatarUploadForm = document.getElementById('avatarUploadForm');
+    const previewImg = document.getElementById('profile-preview');
+    const fallback = document.getElementById('profile-preview-fallback');
+
+    if (avatarBadge && avatarFileInput) {
+        avatarBadge.addEventListener('click', () => {
+            avatarFileInput.click();
+        });
+    }
+
+    if (avatarFileInput && avatarUploadForm) {
+        avatarFileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    if (previewImg) {
+                        previewImg.src = evt.target.result;
+                        previewImg.style.display = 'block';
+                    }
+                    if (fallback) fallback.style.display = 'none';
+                };
+                reader.readAsDataURL(this.files[0]);
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Uploading Profile Picture...',
+                        text: 'Please wait a moment while your image is being saved.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                }
+                avatarUploadForm.submit();
+            }
+        });
     }
 });
-
-// Overlay Hover Effect
-const profileContainer = document.querySelector('.position-relative.d-inline-block.mb-3');
-const profileOverlay = document.querySelector('.profile-overlay');
-if (profileContainer && profileOverlay) {
-    profileContainer.addEventListener('mouseover', () => { profileOverlay.style.opacity = '1'; });
-    profileContainer.addEventListener('mouseout', () => { profileOverlay.style.opacity = '0'; });
-}
 
 // Show more / Show less for reviews
 function toggleReview(link) {
@@ -143,7 +170,7 @@ const toggleEditBtn = document.getElementById('toggleEditProfileBtn');
 const editSection = document.getElementById('editProfileSection');
 if (toggleEditBtn && editSection) {
     toggleEditBtn.addEventListener('click', () => {
-        const isHidden = editSection.style.display === 'none';
+        const isHidden = editSection.style.display === 'none' || editSection.style.display === '';
         editSection.style.display = isHidden ? 'block' : 'none';
         
         toggleEditBtn.replaceChildren();

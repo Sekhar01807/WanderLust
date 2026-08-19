@@ -136,39 +136,30 @@
     <div id="listingsGridContainer" class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-3">
         <% for(let listing of allListings){ %>
             <div class="col mb-4">
-                <div class="card listing-card shadow-sm border-0 rounded-4 overflow-hidden h-100">
-                    <a href="/listings/<%= listing._id %>" class="listing-link">
+                <div class="card listing-card shadow-sm border-0 rounded-4 overflow-hidden h-100 position-relative">
+                    <div class="listing-img-container position-relative" style="overflow: hidden; border-radius: 1rem;">
+                        <a href="/listings/<%= listing._id %>" class="listing-link">
+                            <img src="<%= listing.image ? listing.image.url : '' %>" class="card-img-top" alt="listing_image" style="height:20rem; object-fit:cover; border-radius: 1rem !important;">
+                            <div class="card-img-overlay"></div>
+                            <!-- Hover overlay (Customized for Host vs Guest) -->
+                            <% const isListingOwner = typeof currUser !== 'undefined' && currUser && listing.owner && (listing.owner._id ? listing.owner._id.toString() === currUser._id.toString() : listing.owner.toString() === currUser._id.toString()); %>
+                            <div class="book-now-overlay">
+                                <% if (isListingOwner) { %>
+                                    <span class="book-now-text" style="background: rgba(33, 37, 41, 0.9);"><i class="fa-solid fa-house-user me-2"></i>Your Listing</span>
+                                <% } else { %>
+                                    <span class="book-now-text"><i class="fa-solid fa-calendar-check me-2"></i>Book Now</span>
+                                <% } %>
+                            </div>
+                        </a>
 
-
-                    <div class="listing-img-container" style="overflow: hidden; border-radius: 1rem; position: relative;">
-                        <img src="<%= listing.image ? listing.image.url : '' %>" class="card-img-top" alt="listing_image" style="height:20rem; object-fit:cover; border-radius: 1rem !important;">
-                        <div class="card-img-overlay"></div>
-                        <!-- Hover overlay (Customized for Host vs Guest) -->
-                        <% const isListingOwner = typeof currUser !== 'undefined' && currUser && listing.owner && (listing.owner._id ? listing.owner._id.toString() === currUser._id.toString() : listing.owner.toString() === currUser._id.toString()); %>
-                        <div class="book-now-overlay">
-                            <% if (isListingOwner) { %>
-                                <span class="book-now-text" style="background: rgba(33, 37, 41, 0.9);"><i class="fa-solid fa-house-user me-2"></i>Your Listing</span>
-                            <% } else { %>
-                                <span class="book-now-text"><i class="fa-solid fa-calendar-check me-2"></i>Book Now</span>
-                            <% } %>
+                        <!-- Floating Wishlist Heart Icon -->
+                        <div class="wishlist-btn-form position-absolute" style="top: 12px; right: 12px; z-index: 10;">
+                            <% const isWishlisted = typeof currUser !== 'undefined' && currUser && currUser.wishlist && currUser.wishlist.some(w => (w ? w.toString() : '') === listing._id.toString()); %>
+                            <button type="button" class="wishlist-btn" title="Toggle Wishlist" data-listing-id="<%= listing._id %>" data-logged-in="<%= (typeof currUser !== 'undefined' && currUser) ? 'true' : 'false' %>">
+                                <i class="<%= isWishlisted ? 'fa-solid fa-heart' : 'fa-regular fa-heart' %>" style="<%= isWishlisted ? 'color: #ff385c !important;' : '' %>"></i>
+                            </button>
                         </div>
                     </div>
-                </a>
-
-
-
-                
-                <% if(typeof currUser !== 'undefined' && currUser) { %>
-                <div class="wishlist-btn-form">
-                    <button type="button" class="wishlist-btn" title="Toggle Wishlist" data-listing-id="<%= listing._id %>">
-                        <% if(currUser.wishlist && currUser.wishlist.map(w=>w.toString()).includes(listing._id.toString())) { %>
-                            <i class="fa-solid fa-heart" style="color:crimson;"></i>
-                        <% } else { %>
-                            <i class="fa-regular fa-heart"></i>
-                        <% } %>
-                    </button>
-                </div>
-                <% } %>
                 
                 <a href="/listings/<%= listing._id %>" class="listing-link" style="text-decoration:none; color:inherit;">
                     <div class="card-body">
@@ -185,7 +176,6 @@
         <% } %>
     </div>
     <% } %>
-</body>
 
 <script>
     // Filter Bar Scroll Navigation Controls & Active Icon Auto-Centering
@@ -216,8 +206,7 @@
         }
     });
 
-
-    // Wishlist AJAX Toggle (with SweetAlert2 Toasts)
+    // Wishlist AJAX Toggle (with SweetAlert2 Toasts & Event Delegation)
     const Toast = Swal.mixin({
         toast: true,
         position: 'top-end',
@@ -227,58 +216,104 @@
         background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#1e1e1e' : '#fff',
         color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#222',
         didOpen: (toast) => {
-            toast.addEventListener('mouseenter', Swal.stopTimer)
-            toast.addEventListener('mouseleave', Swal.resumeTimer)
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
         }
     });
 
-    document.querySelectorAll('.wishlist-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const listingId = btn.dataset.listingId;
-            try {
-                const res = await fetch(`/wishlist/${listingId}`, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-                    }
-                });
-                if (res.redirected) {
-                    window.location.href = res.url;
-                    return;
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.wishlist-btn');
+        if (!btn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const isLoggedIn = btn.dataset.loggedIn === 'true';
+        if (!isLoggedIn) {
+            Toast.fire({
+                icon: 'warning',
+                title: 'Please log in to save to your wishlist!'
+            });
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 1200);
+            return;
+        }
+
+        const listingId = btn.dataset.listingId;
+        const icon = btn.querySelector('i');
+        const cookieMatch = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || (cookieMatch ? decodeURIComponent(cookieMatch[1]) : '');
+
+        // Instant optimistic toggle
+        const wasSolid = icon.classList.contains('fa-solid');
+        if (!wasSolid) {
+            icon.className = 'fa-solid fa-heart';
+            icon.style.setProperty('color', '#ff385c', 'important');
+            btn.style.transform = 'scale(1.25)';
+            setTimeout(() => btn.style.transform = '', 200);
+            Toast.fire({
+                icon: 'success',
+                title: 'Saved to Wishlist ❤️'
+            });
+        } else {
+            icon.className = 'fa-regular fa-heart';
+            icon.style.removeProperty('color');
+            btn.style.transform = 'scale(0.85)';
+            setTimeout(() => btn.style.transform = '', 200);
+            Toast.fire({
+                icon: 'info',
+                title: 'Removed from Wishlist'
+            });
+        }
+
+        try {
+            const res = await fetch(`/wishlist/${listingId}?_csrf=${encodeURIComponent(csrfToken)}`, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': csrfToken,
+                    'csrf-token': csrfToken
+                },
+                body: JSON.stringify({ _csrf: csrfToken })
+            });
+
+            if (res.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+
+            if (!res.ok) {
+                // Revert state on server error
+                if (wasSolid) {
+                    icon.className = 'fa-solid fa-heart';
+                    icon.style.setProperty('color', '#ff385c', 'important');
+                } else {
+                    icon.className = 'fa-regular fa-heart';
+                    icon.style.removeProperty('color');
                 }
-                if (res.ok) {
-                    const data = await res.json();
-                    const icon = btn.querySelector('i');
-                    if (data.wishlisted) {
-                        icon.className = 'fa-solid fa-heart';
-                        icon.style.color = 'crimson';
-                        btn.style.transform = 'scale(1.3)';
-                        setTimeout(() => btn.style.transform = '', 200);
-                        Toast.fire({
-                            icon: 'success',
-                            title: 'Added to Wishlist'
-                        });
-                    } else {
-                        icon.className = 'fa-regular fa-heart';
-                        icon.style.color = '';
-                        Toast.fire({
-                            icon: 'info',
-                            title: 'Removed from Wishlist'
-                        });
-                    }
-                }
-            } catch (err) {
-                console.error('Wishlist toggle error:', err);
                 Toast.fire({
                     icon: 'error',
-                    title: 'Something went wrong'
+                    title: 'Could not update wishlist'
                 });
             }
-        });
+        } catch (err) {
+            console.error('Wishlist toggle error:', err);
+            // Revert state on network error
+            if (wasSolid) {
+                icon.className = 'fa-solid fa-heart';
+                icon.style.setProperty('color', '#ff385c', 'important');
+            } else {
+                icon.className = 'fa-regular fa-heart';
+                icon.style.removeProperty('color');
+            }
+            Toast.fire({
+                icon: 'error',
+                title: 'Network error. Please try again.'
+            });
+        }
     });
 </script>
