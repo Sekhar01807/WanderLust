@@ -1,4 +1,7 @@
-<% if (currUser && (typeof hasVerifiedStay !== 'undefined' && hasVerifiedStay) && listing.owner && !listing.owner._id.equals(currUser._id)) { %>
+<% 
+  const isListingOwner = currUser && listing && listing.owner && ((listing.owner._id ? listing.owner._id.toString() : listing.owner.toString()) === currUser._id.toString());
+%>
+<% if (currUser && (typeof hasVerifiedStay !== 'undefined' && hasVerifiedStay) && !isListingOwner) { %>
   <hr class="mb-5 border-secondary-subtle" />
   
   <!-- Modern Review Creation Card -->
@@ -122,7 +125,8 @@
           <% } %>
 
           <!-- Author Actions -->
-          <% if (currUser && review.author && review.author._id.equals(currUser._id)) { %>
+          <% const isReviewAuthor = currUser && review.author && ((review.author._id ? review.author._id.toString() : review.author.toString()) === currUser._id.toString()); %>
+          <% if (isReviewAuthor) { %>
               <div class="border-top pt-2 mt-auto text-end">
                   <form method="POST" action="/listings/<%= listing._id %>/reviews/<%= review._id %>?_method=DELETE" class="d-inline delete-review-form">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">

@@ -31,7 +31,8 @@
                 </div>
             </div>
             <div class="modal-footer p-3 border-top bg-white">
-                <% if (currUser && listing.owner && listing.owner._id && listing.owner._id.equals(currUser._id)) { %>
+                <% const isListingChatOwner = currUser && listing.owner && ((listing.owner._id ? listing.owner._id.toString() : listing.owner.toString()) === currUser._id.toString()); %>
+                <% if (isListingChatOwner) { %>
                     <div class="w-100 text-center py-2">
                         <span class="badge rounded-pill bg-light text-muted p-2">You are the host of this listing</span>
                     </div>
