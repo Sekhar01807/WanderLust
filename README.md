@@ -19,26 +19,26 @@
 - **Media Management**: High-resolution image uploads with Cloudinary storage and optimization.
 
 ### 💳 Transactional Booking & Stripe Integration
-- **Atomic Concurrency & Double-Booking Prevention**:
+- **Best-Effort Reservation Holds & Collision Mitigation**:
   - Proactive purging of expired pending holds prior to overlap checks.
-  - Atomic 30-minute temporary reservation holds created in the database *prior* to Stripe Checkout session initialization.
+  - Best-effort 30-minute temporary reservation holds created in the database *prior* to Stripe Checkout session initialization.
   - Hold expiration synchronized with Stripe Checkout Session's `expires_at` timestamp.
-  - Real-time collision detection and rollback to eliminate double-spend and overlapping reservation race conditions.
+  - Pre-checkout collision verification with narrow-window race mitigation and automatic Stripe refund fallback on fulfillment conflicts.
 - **Paid Booking Cancellation with Automated Stripe Refunds**:
   - Cancelling a confirmed paid booking triggers automated Stripe payment refunds (`stripe.refunds.create()`).
   - Persists full refund state (`refundStatus`, `refundId`, `refundAmount`, `cancelledAt`) in the database with guest email confirmations.
 - **Authoritative Stripe Webhook Fulfillment (`POST /webhook`)**:
   - Strict **fail-closed** cryptographic signature verification (`stripe.webhooks.constructEvent`) — rejects all unsigned or forged payloads without fallback.
   - Automatic retry signaling: returns `HTTP 500` on any fulfillment failure so Stripe automatically retries event delivery with exponential backoff.
-  - Dedicated handling for `checkout.session.completed` (atomic transition from `pending` to `paid`) and `checkout.session.expired` (hold release).
+  - Dedicated handling for `checkout.session.completed` (transition from `pending` to `paid` with idempotency checks) and `checkout.session.expired` (hold release).
 - **Automated Refund Failsafe**:
-  - Guaranteed transactional consistency with automated Stripe refunds in the edge case of an unfulfillable conflict.
+  - Transactional consistency backed by automated Stripe refunds in the edge case of an unfulfillable conflict.
 - **E-Receipts**: Official digital booking receipts with guest/host access control.
 - **Deduplicated Waitlist System**: Unique compound indexing prevents duplicate waitlist requests for the same user, listing, and date range, notifying guests immediately when reserved dates are freed up.
 
 ### 👤 User & Host Ecosystem
 - **Dual Role Profiles**: Travelers can browse, save wishlists, and reserve; Hosts get an analytics dashboard (earnings, active/cancelled reservations, and audit logs).
-- **Direct Messaging**: In-app messaging between guests and property owners with relationship authorization, scoped conversation deletion, and XSS-hardened textContent DOM rendering.
+- **Direct Messaging**: In-app messaging between guests and property owners with relationship authorization, scoped conversation deletion, and safe DOM `.textContent` rendering.
 - **Verified Reviews & Ratings**: Strict review creation policy requiring an actual confirmed/completed stay at the property; scoped review deletion verification preventing cross-listing mutations.
 - **Automated Emails**: HTML email notifications via Nodemailer / SendGrid / Mailtrap for bookings, cancellations, refunds, waitlists, and reminders with fail-closed sender controls in production.
 - **Cron Jobs**: Scheduled daily cron tasks for check-in and check-out email reminders.
@@ -49,13 +49,13 @@
 
 | Defense Layer | Implementation Details |
 | :--- | :--- |
-| **XSS Prevention (Chat & Views)** | Stored chat messages and user labels rendered using safe DOM `.textContent` properties. Listing metadata in client scripts is isolated inside non-executable `<script type="application/json">` blocks with unicode-escaped angle brackets (`\u003c`, `\u003e`). |
+| **XSS Prevention (Chat & Views)** | Stored chat messages and user labels rendered using safe DOM `.textContent` and `.replaceChildren()` APIs. Listing metadata in client scripts is isolated inside non-executable `<script type="application/json">` blocks with unicode-escaped angle brackets (`\u003c`, `\u003e`). Zero dynamic `innerHTML` in client scripts. |
 | **Session Invalidation on Password Reset** | `sessionVersion` tracking on user accounts invalidates all pre-existing authenticated sessions across all devices immediately upon password reset. |
 | **Verified Stay Authorization** | Reviews restricted strictly to guests with confirmed/completed bookings; review deletion middleware validates listing association. |
 | **Paid Booking Refunds & Cancellation** | Full transactional refund handling via Stripe API with persisted database refund audit logs. |
 | **CSRF Protection** | Global session-backed CSRF middleware enforcing token validation on all state-changing verbs (`POST`, `PUT`, `PATCH`, `DELETE`), including `POST /logout`. Webhooks exempted via cryptographic signatures. |
 | **Stripe Webhook Verification** | Strict fail-closed verification rejecting missing configurations (500), missing signatures (400), and invalid signatures (400) with zero unsigned fallback. |
-| **Atomic Booking Holds** | Database holds acquired prior to Stripe session creation, synchronized with Stripe's 30-minute expiration, and protected by automated refund failsafes. |
+| **Best-Effort Booking Holds** | Database holds created prior to Stripe session initialization, synchronized with Stripe's 30-minute expiration, backed by post-hold collision checks and automated Stripe refund failsafes. |
 | **Upload Boundaries & MIME Filter** | Multer configured with strict MIME type allowlisting (`JPEG`, `PNG`, `WebP`) and a 5MB per-file boundary limit. |
 | **Fail-Closed Production Configuration** | Canonical `APP_URL` and `FROM_EMAIL` strictly required in production mode to prevent host header poisoning and unconfigured sender fallbacks. |
 | **Account Enumeration Defense** | Generic, timing-safe error messaging on `/signup`, `/login`, and `/forgot` to prevent discovery of registered emails and phone numbers. |
@@ -159,13 +159,14 @@ npm test
 ```
 
 ### Test Coverage:
+- `test/edgeCases.test.js` — Comprehensive edge cases: duplicate webhooks, already fulfilled bookings, expired holds, date overlap boundaries, refund failure handling, and unauthorized message access.
 - `test/webhook.test.js` — Fail-closed signature verification, missing secret/signature, retry status (500), and success (200) handling.
-- `test/fulfillment.test.js` — Idempotent fulfillment, atomic status transitions (`pending` → `paid`), and auto-refund handling.
-- `test/bookingHold.test.js` — Date overlap algorithms, active vs expired hold blocking, 30-minute expiration sync with Stripe `expires_at`, and concurrency collision detection.
+- `test/fulfillment.test.js` — Idempotent fulfillment, status transitions (`pending` → `paid`), and auto-refund handling.
+- `test/bookingHold.test.js` — Date overlap algorithms, active vs expired hold blocking, 30-minute expiration sync with Stripe `expires_at`, and collision detection.
 - `test/csrf.test.js` — Session CSRF token lifecycle, `POST /logout` enforcement, and webhook exemption.
 - `test/messageAuth.test.js` — Scoped conversation deletion and host/guest authorization.
 - `test/schema.test.js` — Joi validation constraints for listings, reviews, and reservation dates.
-- `test/security.test.js` — SHA-256 deterministic token hashing, ReDoS search escaping, JSON script tag breakout sanitization, and upload MIME allowlisting.
+- `test/security.test.js` — SHA-256 deterministic token hashing, ReDoS search escaping, JSON script tag breakout sanitization, upload MIME allowlisting, CSP hardening assertions, and static safe DOM rendering audit.
 - `test/appUrl.test.js` — Multi-environment host resolution and production fail-closed validation.
 
 ---

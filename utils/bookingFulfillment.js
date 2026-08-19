@@ -12,8 +12,8 @@ if (process.env.STRIPE_SECRET_KEY) {
  * Authoritative, Idempotent Booking Fulfillment
  * Can be called by Stripe Webhook (checkout.session.completed) or the /success redirect route.
  * 
- * Guarantees atomic transition from pending to paid and triggers automated Stripe refunds
- * in the theoretical event of an unfulfillable conflict.
+ * Transitions reservation from pending to paid and triggers automated Stripe refunds
+ * in the event of an unfulfillable conflict.
  * 
  * @param {Object|string} sessionOrId - Stripe Checkout Session object or session ID
  * @param {Object} [req] - Express request object for email generation context

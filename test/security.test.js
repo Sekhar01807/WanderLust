@@ -60,3 +60,71 @@ test("Image MIME Filter - only allows valid image mime types", () => {
         assert.ok(!allowedMimes.includes(mime));
     }
 });
+
+test("Content Security Policy - enforces hardened directives without unsafe-eval or wildcard connectSrc", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const appJsContent = fs.readFileSync(path.join(__dirname, "../app.js"), "utf8");
+
+    // 1. Ensure unsafe-eval is NOT present in CSP
+    assert.ok(!appJsContent.includes("'unsafe-eval'"), "CSP must NOT contain 'unsafe-eval'");
+
+    // 2. Ensure connectSrc does NOT use wildcard '*'
+    const connectSrcMatch = appJsContent.match(/connectSrc:\s*\[([\s\S]*?)\]/);
+    assert.ok(connectSrcMatch, "connectSrc directive must be configured");
+    const connectSrcEntries = connectSrcMatch[1];
+    assert.ok(!connectSrcEntries.includes("'*'"), "connectSrc must NOT contain wildcard '*'");
+    assert.ok(!connectSrcEntries.includes('"*"'), "connectSrc must NOT contain wildcard '*'");
+
+    // 3. Ensure objectSrc is strictly 'none'
+    assert.ok(appJsContent.includes(`objectSrc: ["'none'"]`), "objectSrc must be strictly 'none'");
+
+    // 4. Ensure baseUri is 'self'
+    assert.ok(appJsContent.includes(`baseUri: ["'self'"]`), "baseUri must be strictly 'self'");
+});
+
+test("Safe DOM Rendering Audit - views and public scripts do not assign innerHTML or insertAdjacentHTML", () => {
+    const fs = require("fs");
+    const path = require("path");
+
+    function getAllFiles(dir, exts) {
+        let results = [];
+        const list = fs.readdirSync(dir);
+        list.forEach(file => {
+            const filePath = path.join(dir, file);
+            const stat = fs.statSync(filePath);
+            if (stat && stat.isDirectory()) {
+                results = results.concat(getAllFiles(filePath, exts));
+            } else if (exts.some(ext => file.endsWith(ext))) {
+                results.push(filePath);
+            }
+        });
+        return results;
+    }
+
+    const targetDirs = [
+        path.join(__dirname, "../views"),
+        path.join(__dirname, "../public/js")
+    ];
+
+    const allFiles = targetDirs.flatMap(dir => getAllFiles(dir, [".ejs", ".js"]));
+
+    const unsafePatterns = [
+        /\.innerHTML\s*=/,
+        /\.outerHTML\s*=/,
+        /\.insertAdjacentHTML\s*\(/
+    ];
+
+    for (const filePath of allFiles) {
+        const content = fs.readFileSync(filePath, "utf8");
+        for (const pattern of unsafePatterns) {
+            const match = content.match(pattern);
+            assert.equal(
+                match,
+                null,
+                `Found unsafe dynamic HTML generation in ${path.relative(path.join(__dirname, '..'), filePath)} matching ${pattern}`
+            );
+        }
+    }
+});
+

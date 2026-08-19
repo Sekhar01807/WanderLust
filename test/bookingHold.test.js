@@ -86,7 +86,7 @@ test("Booking Hold - synchronizes 30-minute hold expiration with Stripe expires_
     assert.equal(stripeExpiryUnix - Math.floor(referenceTimestamp / 1000), 1800, "Stripe session expiry must be exactly 1800 seconds (30 mins)");
 });
 
-test("Booking Hold - atomic concurrency check detects conflicting hold created earlier or concurrently", () => {
+test("Booking Hold - collision check detects conflicting hold created earlier or concurrently", () => {
     const holdA = {
         _id: "hold_A",
         checkIn: "2026-10-01",

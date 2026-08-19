@@ -90,7 +90,7 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
     // Hold expiration: 30 minutes, synchronized with Stripe Checkout Session expiration
     const holdExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-    // 2. Atomically create pending reservation hold BEFORE external Stripe API call
+    // 2. Create pending reservation hold BEFORE external Stripe API call
     const pendingHold = new Booking({
         listing: id,
         user: req.user._id,
@@ -103,7 +103,7 @@ router.post("/checkout", isLoggedIn, validateBooking, wrapAsync(async (req, res)
     });
     await pendingHold.save();
 
-    // 3. Atomic Concurrency Collision Check: ensure no other reservation claimed this slot
+    // 3. Narrow-window collision check: detect conflicting reservations created earlier or concurrently
     const concurrentCollision = await Booking.findOne({
         _id: { $ne: pendingHold._id },
         listing: id,
