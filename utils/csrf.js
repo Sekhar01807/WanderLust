@@ -67,6 +67,10 @@ function csrfProtection(req, res, next) {
             if (expectedBuf.length !== submittedBuf.length) return false;
             return crypto.timingSafeEqual(expectedBuf, submittedBuf);
         } catch (e) {
+            return false;
+        }
+    };
+
     const tokenValid = isTokenMatch(sessionToken, submittedToken) || isTokenMatch(cookieToken, submittedToken);
 
     if (tokenValid) {
