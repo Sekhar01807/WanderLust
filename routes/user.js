@@ -95,8 +95,13 @@ router.get("/receipt/:bookingId", isLoggedIn, wrapAsync(async (req, res) => {
     }
 
     res.render("users/receipt.ejs", { booking });
-}));
-
+// Privacy & Terms informational routes
+router.get("/privacy", (req, res) => {
+    res.redirect("/listings");
+});
+router.get("/terms", (req, res) => {
+    res.redirect("/listings");
+});
 
 module.exports = router;
 

@@ -1,7 +1,10 @@
 <% if (typeof currUser === 'undefined') { var currUser = null; } %>
 <nav class="navbar navbar-expand-md bg-body shadow-sm sticky-top" style="border-bottom: 1px solid var(--bs-border-color); padding: 0.8rem 0;">
   <div class="container-fluid">
-    <a class="navbar-brand d-flex align-items-center gap-2" href="/listings"><img src="/logo.svg" alt="Logo" style="height: 34px; width: 34px; object-fit: contain;"><span class="fw-bold text-danger d-none d-sm-inline" style="letter-spacing: -0.5px;">WanderLust</span></a>
+    <a class="navbar-brand d-flex align-items-center gap-2" href="/listings">
+      <i class="fa-regular fa-compass fa-2x text-danger"></i>
+      <span class="fw-bold text-danger d-none d-sm-inline" style="letter-spacing: -0.5px; font-size: 1.4rem;">WanderLust</span>
+    </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup">
       <span class="navbar-toggler-icon"></span>
     </button>

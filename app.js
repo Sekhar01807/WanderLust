@@ -235,9 +235,9 @@ app.use((req, res, next) => {
     next();
 });
 
-// Landing page
+// Root route redirects to listings
 app.get("/", (req, res) => {
-    res.render("listings/landing.ejs");
+    res.redirect("/listings");
 });
 
 const bookingRouter = require("./routes/booking.js");

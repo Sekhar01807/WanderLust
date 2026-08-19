@@ -34,15 +34,14 @@
     </script>
 </head>
 
-<body>
+<body class="d-flex flex-column min-vh-100">
     <%- include("../includes/navbar.ejs") %>
 
-        <div class="container main-content-container">
-                <%- body %>
-        </div>
+    <div class="container flex-grow-1 main-content-container">
+        <%- body %>
+    </div>
 
-
-        <%- include("../includes/footer.ejs") %>
+    <%- include("../includes/footer.ejs") %>
         <%- include("../includes/floatingChat.ejs") %>
         <%- include("../includes/floatingBooking.ejs") %>
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
