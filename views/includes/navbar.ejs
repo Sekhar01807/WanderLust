@@ -40,12 +40,17 @@
             const data = await response.json();
 
             if (data.features && data.features.length > 0) {
-                suggestionsContainer.innerHTML = '';
+                suggestionsContainer.replaceChildren();
                 data.features.forEach(feature => {
                     const div = document.createElement('div');
                     div.className = 'suggestion-item p-3 border-bottom cursor-pointer';
                     div.style.cursor = 'pointer';
-                    div.innerHTML = `<i class="fa-solid fa-location-dot me-2 text-danger"></i>${feature.place_name}`;
+
+                    const icon = document.createElement('i');
+                    icon.className = 'fa-solid fa-location-dot me-2 text-danger';
+                    div.appendChild(icon);
+                    div.appendChild(document.createTextNode(feature.place_name || ''));
+
                     div.addEventListener('click', () => {
                         searchInput.value = feature.place_name;
                         suggestionsContainer.classList.add('d-none');

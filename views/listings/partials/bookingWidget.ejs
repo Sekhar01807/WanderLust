@@ -1,0 +1,423 @@
+<% 
+  const ownerId = (listing.owner && listing.owner._id) ? listing.owner._id.toString() : (listing.owner ? listing.owner.toString() : "");
+  const isOwner = currUser && ownerId === currUser._id.toString();
+%>
+
+<% if (!isOwner) { %>
+<div class="bg-light p-4 rounded-4 mb-3 mt-4" style="border: 2px solid #ff385c;">
+  <div id="bookingSection">
+
+    <% if (userBooking && userBooking.paymentStatus === 'paid') { %>
+      <!-- Active Reservation Card (Visible by default) -->
+      <div id="bookingStatusCard" class="alert alert-success border-0 shadow-sm rounded-4 p-4 mb-0 animate__animated animate__pulse">
+        <div class="d-flex align-items-center mb-3">
+          <div class="position-relative">
+              <i class="fa-solid fa-calendar-check fs-2 me-3"></i>
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 0.6rem;">LIVE</span>
+          </div>
+          <div>
+            <h5 class="fw-bold mb-0" id="liveBookingStatus">Calculating status...</h5>
+            <p class="text-muted small mb-0">You have a confirmed reservation for this stay.</p>
+          </div>
+        </div>
+        <div class="bg-white rounded-3 p-3 mb-3 text-dark shadow-sm">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="small fw-bold text-muted text-uppercase">Dates</span>
+              <span class="badge bg-light text-dark border"><%= new Date(userBooking.checkIn).toLocaleDateString() %> - <%= new Date(userBooking.checkOut).toLocaleDateString() %></span>
+          </div>
+          <p class="mb-0 small"><strong>Guests:</strong> <%= userBooking.guests %> Guests</p>
+        </div>
+        <div class="row g-2">
+          <div class="col-6">
+            <button id="rescheduleBtn" class="btn btn-outline-success w-100 fw-bold py-2 rounded-3 border-2">Reschedule</button>
+          </div>
+          <div class="col-6">
+            <form id="cancelTripForm" action="/listings/<%= listing._id %>/booking/<%= userBooking._id %>?_method=DELETE" method="POST">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="btn btn-danger w-100 fw-bold py-2 rounded-3" id="cancelTripBtn">Cancel Trip</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <script>
+      (() => {
+          const checkIn = new Date("<%= userBooking.checkIn %>");
+          const checkOut = new Date("<%= userBooking.checkOut %>");
+          const today = new Date();
+          const statusText = document.getElementById('liveBookingStatus');
+          if (!statusText) return;
+          
+          const diffInTime = checkIn.getTime() - today.getTime();
+          const daysToStart = Math.ceil(diffInTime / (1000 * 3600 * 24));
+          
+          const diffToEnd = checkOut.getTime() - today.getTime();
+          const daysToEnd = Math.ceil(diffToEnd / (1000 * 3600 * 24));
+
+          statusText.replaceChildren();
+          if (today >= checkIn && today <= checkOut) {
+              const span = document.createElement('span');
+              span.className = 'text-success';
+              span.textContent = 'Enjoying your stay!';
+              const small = document.createElement('small');
+              small.className = 'text-muted fs-6 ms-1';
+              small.textContent = `(Ends in ${daysToEnd} days)`;
+              statusText.appendChild(span);
+              statusText.appendChild(small);
+          } else if (daysToStart === 0) {
+              statusText.textContent = "Starts Today! 🎒";
+          } else if (daysToStart === 1) {
+              statusText.textContent = "Starts Tomorrow! ✈️";
+          } else if (daysToStart > 0) {
+              statusText.textContent = `Starts in ${daysToStart} days! ⏳`;
+          } else {
+              statusText.textContent = "Trip Completed ✨";
+          }
+
+          // Real-Time Instant AJAX Cancellation Handler
+          const cancelForm = document.getElementById('cancelTripForm');
+          if (cancelForm) {
+              cancelForm.addEventListener('submit', async (e) => {
+                  e.preventDefault();
+                  if (!confirm('Are you sure you want to cancel your reservation for this stay?')) return;
+
+                  try {
+                      const res = await fetch(cancelForm.action, {
+                          method: 'POST',
+                          headers: {
+                              'X-Requested-With': 'XMLHttpRequest',
+                              'Accept': 'application/json',
+                              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                          }
+                      });
+                      window.location.reload();
+                  } catch (err) {
+                      window.location.reload();
+                  }
+              });
+          }
+      })();
+      </script>
+
+      <!-- Rescheduling UI (Hidden by default) -->
+      <div id="rescheduleUI" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-bold mb-0" style="color: #ff385c;"><i class="fa-solid fa-clock-rotate-left me-2"></i>Reschedule Stay</h5>
+          <button type="button" id="cancelRescheduleBtn" class="btn btn-link text-muted text-decoration-none p-0 fw-bold">Cancel</button>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold small text-muted">CHECK-IN</label>
+            <input type="date" id="checkin" class="form-control rounded-3">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small text-muted">CHECK-OUT</label>
+            <input type="date" id="checkout" class="form-control rounded-3">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small text-muted">GUESTS</label>
+            <select id="guests" class="form-select rounded-3">
+              <option value="1">1 Guest</option>
+              <option value="2">2 Guests</option>
+              <option value="3">3 Guests</option>
+              <option value="4">4 Guests</option>
+              <option value="5">5 Guests</option>
+              <option value="6">6+ Guests</option>
+            </select>
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <div class="w-100">
+              <p class="mb-1 text-muted small">New Estimated Total</p>
+              <p class="fs-4 fw-bold mb-0" style="color: #ff385c;" id="bookingTotal">&#8377; <%= listing.price ? listing.price.toLocaleString("en-IN") : "0" %></p>
+            </div>
+          </div>
+        </div>
+        <hr>
+        <form action="/listings/<%= listing._id %>/booking/checkout" method="POST" id="rescheduleForm" class="mt-3">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="checkIn" id="hiddenRescheduleCheckin">
+          <input type="hidden" name="checkOut" id="hiddenRescheduleCheckout">
+          <input type="hidden" name="guests" id="hiddenRescheduleGuests">
+          <div class="col-12 mt-3">
+            <button type="submit" class="btn w-100 py-3 fw-bold fs-5 rounded-3 shadow-sm" id="rescheduleConfirmBtn" style="background: linear-gradient(135deg, #ff385c, #e03150); color: white; border: none; transition: all 0.3s;">
+              <i class="fa-solid fa-credit-card me-2"></i>Confirm Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    <% } else { %>
+      <!-- Default Booking Form -->
+      <h5 class="fw-bold mb-4" style="color: #ff385c;"><i class="fa-solid fa-calendar-check me-2"></i>Book This Place</h5>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-bold small text-muted">CHECK-IN</label>
+          <input type="date" id="checkin" class="form-control rounded-3">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-bold small text-muted">CHECK-OUT</label>
+          <input type="date" id="checkout" class="form-control rounded-3">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-bold small text-muted">GUESTS</label>
+          <select id="guests" class="form-select rounded-3">
+            <option value="1">1 Guest</option>
+            <option value="2" selected>2 Guests</option>
+            <option value="3">3 Guests</option>
+            <option value="4">4 Guests</option>
+            <option value="5">5 Guests</option>
+            <option value="6">6+ Guests</option>
+          </select>
+        </div>
+        <div class="col-md-6 d-flex align-items-end">
+          <div class="w-100">
+            <p class="mb-1 text-muted small">Estimated Total</p>
+            <p class="fs-4 fw-bold mb-0" style="color: #ff385c;" id="bookingTotal">&#8377; <%= listing.price ? listing.price.toLocaleString("en-IN") : "0" %></p>
+          </div>
+        </div>
+      </div>
+      <hr>
+      <form action="/listings/<%= listing._id %>/booking/checkout" method="POST" id="bookingForm" class="mt-3">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="checkIn" id="hiddenCheckin">
+        <input type="hidden" name="checkOut" id="hiddenCheckout">
+        <input type="hidden" name="guests" id="hiddenGuests">
+        <div class="col-12 mt-3">
+          <button type="submit" class="btn w-100 py-3 fw-bold fs-5 rounded-3 shadow-sm" id="bookNowBtn" style="background: linear-gradient(135deg, #ff385c, #e03150); color: white; border: none; transition: all 0.3s;">
+            <i class="fa-solid fa-credit-card me-2"></i>Secure Checkout
+          </button>
+          <p class="text-center text-muted small mt-2 mb-0">Powered by Stripe — Encrypted & Secure</p>
+
+          <% if (currUser && listing.owner && !listing.owner._id.equals(currUser._id)) { %>
+              <p class="text-center mt-2 mb-0">
+                  <a href="javascript:void(0)" class="small fw-bold text-decoration-none" style="color: #ff385c;" data-bs-toggle="modal" data-bs-target="#chatModal">
+                      <i class="fa-regular fa-comment-dots me-1"></i> Have questions? Inquire with Host
+                  </a>
+              </p>
+          <% } %>
+        </div>
+      </form>
+    <% } %>
+  </div>
+</div>
+<% } %>
+
+<!-- Booking Confirmation Modal -->
+<div class="modal fade" id="bookingConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-body p-0">
+        <div class="text-center py-5" style="background: linear-gradient(135deg, #ff385c, #e03150);">
+          <div class="mb-3">
+            <i class="fa-solid fa-circle-check text-white" style="font-size: 5rem;"></i>
+          </div>
+          <h3 class="text-white fw-bold">Booking Confirmed!</h3>
+          <p class="text-white-50 mb-0">Pack your bags, you're going to <%= listing.location %>!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Booking Pricing & Form Handler
+(() => {
+    const checkinInput = document.getElementById('checkin');
+    const checkoutInput = document.getElementById('checkout');
+    const totalDisplay = document.getElementById('bookingTotal');
+    const bookBtn = document.getElementById('bookNowBtn');
+    const pricePerNight = <%= listing.price || 0 %>;
+
+    // Set min date to today
+    const today = new Date().toISOString().split('T')[0];
+    if (checkinInput) checkinInput.min = today;
+    if (checkoutInput) checkoutInput.min = today;
+
+    function calcTotal() {
+        if (!checkinInput || !checkoutInput || !totalDisplay) return;
+        const checkin = new Date(checkinInput.value);
+        const checkout = new Date(checkoutInput.value);
+        const guestInput = document.getElementById('guests');
+        const guests = guestInput ? parseInt(guestInput.value) : 1;
+
+        totalDisplay.replaceChildren();
+        if (checkinInput.value && checkoutInput.value && checkout > checkin) {
+            const nights = Math.ceil((checkout - checkin) / (1000 * 60 * 60 * 24));
+            const extraCharge = guests > 1 ? (guests - 1) * 0.25 * pricePerNight : 0;
+            const total = nights * (pricePerNight + extraCharge);
+            
+            totalDisplay.appendChild(document.createTextNode(`₹ ${total.toLocaleString('en-IN')} `));
+            const span = document.createElement('span');
+            span.className = 'fs-6 fw-normal text-muted';
+            span.textContent = `(${nights} night${nights > 1 ? 's' : ''})`;
+            totalDisplay.appendChild(span);
+        } else {
+            totalDisplay.textContent = `₹ ${pricePerNight.toLocaleString('en-IN')}`;
+        }
+    }
+
+    if (checkinInput) {
+        checkinInput.addEventListener('change', () => {
+            const nextDay = new Date(checkinInput.value);
+            nextDay.setDate(nextDay.getDate() + 1);
+            checkoutInput.min = nextDay.toISOString().split('T')[0];
+            if (checkoutInput.value && new Date(checkoutInput.value) <= new Date(checkinInput.value)) {
+                checkoutInput.value = nextDay.toISOString().split('T')[0];
+            }
+            calcTotal();
+        });
+    }
+    if (checkoutInput) checkoutInput.addEventListener('change', calcTotal);
+
+    const guestInput = document.getElementById('guests');
+    if (guestInput) {
+        guestInput.addEventListener('change', calcTotal);
+    }
+
+    if (bookBtn) {
+        const rescheduleBtn = document.getElementById('rescheduleBtn');
+        const cancelRescheduleBtn = document.getElementById('cancelRescheduleBtn');
+        const bookingStatusCard = document.getElementById('bookingStatusCard');
+        const rescheduleUI = document.getElementById('rescheduleUI');
+
+        if (rescheduleBtn) {
+            rescheduleBtn.addEventListener('click', () => {
+                bookingStatusCard.style.display = 'none';
+                rescheduleUI.style.display = 'block';
+                checkinInput.focus();
+            });
+        }
+
+        if (cancelRescheduleBtn) {
+            cancelRescheduleBtn.addEventListener('click', () => {
+                rescheduleUI.style.display = 'none';
+                bookingStatusCard.style.display = 'block';
+            });
+        }
+
+        bookBtn.addEventListener('mouseenter', () => {
+            bookBtn.style.transform = 'scale(1.02)';
+            bookBtn.style.boxShadow = '0 8px 20px rgba(255,56,92,0.4)';
+        });
+        bookBtn.addEventListener('mouseleave', () => {
+            bookBtn.style.transform = 'scale(1)';
+            bookBtn.style.boxShadow = 'none';
+        });
+
+        const handleBookingSubmit = (btnType) => {
+            const isUserLoggedIn = <%= (typeof currUser !== 'undefined' && currUser) ? 'true' : 'false' %>;
+            
+            if (!isUserLoggedIn) {
+                window.location.href = `/listings/<%= listing._id %>/reserve`;
+                return false;
+            }
+
+            if (!checkinInput.value || !checkoutInput.value) {
+                const toast = document.createElement('div');
+                toast.className = 'position-fixed bottom-0 end-0 p-3';
+                toast.style.zIndex = '1100';
+
+                const toastInner = document.createElement('div');
+                toastInner.className = 'toast show align-items-center text-white bg-danger border-0';
+                toastInner.setAttribute('role', 'alert');
+
+                const dFlex = document.createElement('div');
+                dFlex.className = 'd-flex';
+
+                const body = document.createElement('div');
+                body.className = 'toast-body';
+                body.textContent = 'Please select check-in and check-out dates!';
+
+                const closeBtn = document.createElement('button');
+                closeBtn.type = 'button';
+                closeBtn.className = 'btn-close btn-close-white me-2 m-auto';
+                closeBtn.setAttribute('data-bs-dismiss', 'toast');
+
+                dFlex.appendChild(body);
+                dFlex.appendChild(closeBtn);
+                toastInner.appendChild(dFlex);
+                toast.appendChild(toastInner);
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+                return false;
+            }
+            
+            if (btnType === 'reschedule') {
+                document.getElementById('hiddenRescheduleCheckin').value = checkinInput.value;
+                document.getElementById('hiddenRescheduleCheckout').value = checkoutInput.value;
+                document.getElementById('hiddenRescheduleGuests').value = document.getElementById('guests').value;
+            } else {
+                document.getElementById('hiddenCheckin').value = checkinInput.value;
+                document.getElementById('hiddenCheckout').value = checkoutInput.value;
+                document.getElementById('hiddenGuests').value = document.getElementById('guests').value;
+            }
+            return true;
+        };
+
+        if (bookBtn) {
+            bookBtn.closest('form').addEventListener('submit', (e) => {
+                if (!handleBookingSubmit('new')) e.preventDefault();
+            });
+        }
+
+        const rescheduleConfirmBtn = document.getElementById('rescheduleConfirmBtn');
+        if (rescheduleConfirmBtn) {
+            rescheduleConfirmBtn.closest('form').addEventListener('submit', (e) => {
+                if (!handleBookingSubmit('reschedule')) e.preventDefault();
+            });
+        }
+    }
+    
+    const cancelTripBtn = document.getElementById('cancelTripBtn');
+    if (cancelTripBtn) {
+        cancelTripBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const result = await Swal.fire({
+                title: 'Cancel your trip?',
+                text: "Are you sure you want to cancel this reservation? This cannot be undone.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff385c',
+                cancelButtonColor: '#222',
+                confirmButtonText: 'Yes, cancel it',
+                background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#1e1e1e' : '#fff',
+                color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#222',
+                customClass: {
+                    popup: 'rounded-4 border-0 shadow-lg',
+                    confirmButton: 'rounded-pill px-4',
+                    cancelButton: 'rounded-pill px-4'
+                }
+            });
+
+            if (result.isConfirmed) {
+                cancelTripBtn.closest('form').submit();
+            }
+        });
+    }
+
+    const deleteListingBtn = document.getElementById('deleteListingBtn');
+    if (deleteListingBtn) {
+        deleteListingBtn.addEventListener('click', async () => {
+            const result = await Swal.fire({
+                title: 'Delete this Listing?',
+                text: "This will permanently remove your hotel from WanderLust. You cannot undo this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff385c',
+                cancelButtonColor: '#222',
+                confirmButtonText: 'Yes, delete it',
+                background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#1e1e1e' : '#fff',
+                color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#222',
+                customClass: {
+                    popup: 'rounded-4 border-0 shadow-lg',
+                    confirmButton: 'rounded-pill px-4',
+                    cancelButton: 'rounded-pill px-4'
+                }
+            });
+
+            if (result.isConfirmed) {
+                document.getElementById('deleteListingForm').submit();
+            }
+        });
+    }
+})();
+</script>

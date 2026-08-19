@@ -1,0 +1,158 @@
+<% 
+  let mainImg = listing.image ? listing.image.url : '';
+  let extraImgs = listing.images || [];
+  let totalPhotos = 1 + extraImgs.length;
+%>
+
+<!-- Photo Gallery Modal (Premium XL Style) -->
+<div class="modal fade" id="photoModal" tabindex="-1" aria-hidden="true" style="z-index: 9999;">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content bg-transparent border-0">
+      <div class="modal-body p-0 position-relative">
+        <!-- Close Button (Floating) -->
+        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-4 shadow-lg" data-bs-dismiss="modal" aria-label="Close" style="z-index: 10000; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></button>
+        
+        <div id="photoCarousel" class="carousel slide" data-bs-ride="false" style="background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); border-radius: 1.5rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+          <div class="carousel-inner">
+            <div class="carousel-item active">
+              <div class="d-flex justify-content-center align-items-center" style="height: 70vh;">
+                <img src="<%= mainImg %>" class="d-block w-100 h-100" style="object-fit: contain; padding: 20px;" alt="<%= listing.title %>">
+              </div>
+            </div>
+            <% for(let img of extraImgs) { %>
+              <div class="carousel-item">
+                <div class="d-flex justify-content-center align-items-center" style="height: 70vh;">
+                  <img src="<%= img.url %>" class="d-block w-100 h-100" style="object-fit: contain; padding: 20px;" alt="<%= listing.title %>">
+                </div>
+              </div>
+            <% } %>
+          </div>
+          
+          <% if(totalPhotos > 1) { %>
+            <button class="carousel-control-prev" type="button" data-bs-target="#photoCarousel" data-bs-slide="prev" style="width: 8%;">
+              <span class="carousel-control-prev-icon p-3 bg-white bg-opacity-25 rounded-circle border border-white border-opacity-50" aria-hidden="true"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#photoCarousel" data-bs-slide="next" style="width: 8%;">
+              <span class="carousel-control-next-icon p-3 bg-white bg-opacity-25 rounded-circle border border-white border-opacity-50" aria-hidden="true"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          <% } %>
+          
+          <!-- Counter (Elegant Badge) -->
+          <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4">
+            <span class="badge rounded-pill bg-white bg-opacity-10 text-white px-3 py-2 border border-white border-opacity-25 shadow-sm" style="font-size: 0.9rem; backdrop-filter: blur(5px);">
+              <span id="carouselCounter">1</span> / <%= totalPhotos %>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dynamic Photo Gallery Grid -->
+<div class="photo-gallery rounded-4 overflow-hidden mb-4 shadow-sm" style="position: relative;">
+  <% if (totalPhotos === 1) { %>
+    <!-- Case 1: Only 1 Image -->
+    <div class="row g-0">
+      <div class="col-12">
+        <img src="<%= mainImg %>" class="w-100 gallery-img" style="height: 450px; object-fit: cover; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#photoModal" alt="<%= listing.title %>">
+      </div>
+    </div>
+  <% } else if (totalPhotos === 2) { %>
+    <!-- Case 2: Only 2 Images -->
+    <div class="row g-1">
+      <div class="col-6">
+        <img src="<%= mainImg %>" class="w-100 gallery-img" style="height: 450px; object-fit: cover; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#photoModal" alt="<%= listing.title %>">
+      </div>
+      <div class="col-6">
+        <img src="<%= extraImgs[0].url %>" class="w-100 gallery-img" style="height: 450px; object-fit: cover; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#photoModal" alt="<%= listing.title %>">
+      </div>
+    </div>
+  <% } else if (totalPhotos === 3) { %>
+    <!-- Case 3: 3 Images -->
+    <div class="row g-1">
+      <div class="col-md-8">
+        <img src="<%= mainImg %>" class="w-100 gallery-img" style="height: 450px; object-fit: cover; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#photoModal" alt="<%= listing.title %>">
+      </div>
+      <div class="col-md-4">
+        <div class="d-flex flex-column gap-1">
+          <img src="<%= extraImgs[0].url %>" class="w-100 gallery-img" style="height: 223px; object-fit: cover; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#photoModal" alt="<%= listing.title %>">
+          <img src="<%= extraImgs[1].url %>" class="w-100 gallery-img" style="height: 223px; object-fit: cover; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#photoModal" alt="<%= listing.title %>">
+        </div>
+      </div>
+    </div>
+  <% } else { %>
+    <!-- Case 4: 4 or more Images (Airbnb 5-Grid style) -->
+    <div class="row g-1">
+      <div class="col-md-6">
+        <img src="<%= mainImg %>" class="w-100 gallery-img" style="height: 400px; object-fit: cover; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#photoModal" alt="<%= listing.title %>">
+      </div>
+      <div class="col-md-6">
+        <div class="row g-1">
+          <% for(let i = 0; i < 4; i++) { %>
+            <div class="col-6">
+              <% if(extraImgs[i]) { %>
+                <img src="<%= extraImgs[i].url %>" class="w-100 gallery-img" style="height: 198px; object-fit: cover; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#photoModal" alt="<%= listing.title %>">
+              <% } else { %>
+                <div class="w-100 d-flex align-items-center justify-content-center bg-light" style="height: 198px;">
+                  <i class="fa-solid fa-image text-muted" style="font-size: 2rem;"></i>
+                </div>
+              <% } %>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  <% } %>
+
+  <% if(totalPhotos > 1) { %>
+  <button class="btn btn-light fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#photoModal" style="position: absolute; bottom: 16px; right: 16px; border-radius: 0.5rem; border: 1px solid #222; padding: 0.5rem 1rem; z-index: 5;">
+    <i class="fa-solid fa-grip me-2"></i>Show all photos (<%= totalPhotos %>)
+  </button>
+  <% } %>
+</div>
+
+<script>
+// Global Gallery Modal Controller
+window.openPhotoModal = function(index) {
+    try {
+        const modalEl = document.getElementById('photoModal');
+        const carouselEl = document.getElementById('photoCarousel');
+        if (!modalEl || !carouselEl) return;
+
+        const bsCarousel = bootstrap.Carousel.getOrCreateInstance(carouselEl);
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        bsCarousel.to(index);
+        bsModal.show();
+    } catch (e) {
+        console.error("Gallery Error:", e);
+    }
+};
+
+// Keyboard Navigation for Gallery
+document.addEventListener('keydown', (e) => {
+    const modalEl = document.getElementById('photoModal');
+    if (modalEl && modalEl.classList.contains('show')) {
+        const carouselEl = document.getElementById('photoCarousel');
+        const bsCarousel = bootstrap.Carousel.getInstance(carouselEl);
+        if (bsCarousel) {
+            if (e.key === 'ArrowLeft') bsCarousel.prev();
+            if (e.key === 'ArrowRight') bsCarousel.next();
+        }
+    }
+});
+
+// Gallery Counter Update
+document.addEventListener('DOMContentLoaded', () => {
+    const carouselEl = document.getElementById('photoCarousel');
+    const counterEl = document.getElementById('carouselCounter');
+    if (carouselEl && counterEl) {
+        carouselEl.addEventListener('slid.bs.carousel', function (event) {
+            counterEl.textContent = event.to + 1;
+        });
+    }
+});
+</script>

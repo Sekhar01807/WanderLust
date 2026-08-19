@@ -4,9 +4,6 @@ const nodemailer = require("nodemailer");
 // Configure SendGrid SDK
 if (process.env.SENDGRID_API_KEY) {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY.trim());
-    console.log("✅ Email Service: SENDGRID SDK (Web API Mode)");
-} else {
-    console.log("⚠️  Email Service: MAILTRAP / GMAIL MODE");
 }
 
 // Shared Styling for Premium Emails
@@ -45,13 +42,12 @@ const sendViaGmail = async (msg) => {
     });
 
     try {
-        const info = await transporter.sendMail({
+        await transporter.sendMail({
             from: `"WanderLust" <${user}>`,
             to: msg.to,
             subject: msg.subject,
             html: msg.html
         });
-        console.log(`🚀 REAL-TIME EMAIL DELIVERED via Gmail SMTP to: ${msg.to} (ID: ${info.messageId})`);
         return true;
     } catch (err) {
         console.error("❌ Gmail SMTP Delivery Error:", err.message);
@@ -61,8 +57,7 @@ const sendViaGmail = async (msg) => {
 
 const sendViaSendGrid = async (msg) => {
     try {
-        const response = await sgMail.send(msg);
-        console.log(`🚀 SENT: Email delivered via SendGrid to: ${msg.to}`);
+        await sgMail.send(msg);
         return true;
     } catch (error) {
         console.error("❌ SendGrid SDK Error:", error.message);
@@ -84,7 +79,6 @@ const sendViaMailtrap = async (mailOptions) => {
     });
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`📥 MAILTRAP SANDBOX: Email captured in Mailtrap inbox for ${mailOptions.to}`);
     } catch (error) {
         console.error("❌ Mailtrap Error:", error.message);
     }

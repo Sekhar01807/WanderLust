@@ -67,7 +67,6 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
                         booking.paymentStatus = "cancelled";
                         booking.expiresAt = undefined;
                         await booking.save();
-                        console.log(`ℹ️ Released reservation hold for expired checkout session: ${session.id}`);
 
                         // Notify waitlisted users that dates are available again
                         try {

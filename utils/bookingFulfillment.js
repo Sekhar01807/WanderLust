@@ -98,7 +98,6 @@ async function fulfillBooking(sessionOrId, req = null) {
                 });
                 if (refund && refund.status === "succeeded") {
                     autoRefundSuccess = true;
-                    console.log(`✅ Automatically issued Stripe refund for payment intent: ${session.payment_intent}`);
                 }
             } catch (refundErr) {
                 console.error("❌ Auto-refund attempt error:", refundErr.message);

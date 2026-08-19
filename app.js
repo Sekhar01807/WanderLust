@@ -4,7 +4,7 @@ const dns = require("dns");
 try {
     dns.setServers(["8.8.8.8", "8.8.4.4"]);
 } catch (e) {
-    console.log("DNS setServers failed:", e.message);
+    // Fallback if DNS configuration is restricted by environment
 }
 
 
@@ -41,10 +41,10 @@ const dbUrl = process.env.ATLASDB_URL;
 
 main()
     .then(() => {
-        console.log("connected to DB");
+        // Connected to MongoDB
     })
     .catch((err) => {
-        console.log(err);
+        console.error("MongoDB Connection Error:", err);
     });
 
 // Password Reset Rate Limiting
@@ -74,15 +74,55 @@ app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);
 app.use(express.static(path.join(__dirname, "/public")));
 
-// Helmet (Security Headers) - Permissive for Required External CDNs
+// Helmet (Security Headers) - Restrictive Allowlist for Required External Services
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'", "https://res.cloudinary.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://api.mapbox.com", "https://unpkg.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://js.stripe.com"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://api.mapbox.com", "https://unpkg.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://kit.fontawesome.com"],
-            imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://images.unsplash.com", "https://*.mapbox.com", "https://*.stripe.com"],
-            connectSrc: ["'self'", "*", "blob:", "data:"],
+            scriptSrc: [
+                "'self'", 
+                "'unsafe-inline'", 
+                "https://api.mapbox.com", 
+                "https://unpkg.com", 
+                "https://cdn.jsdelivr.net", 
+                "https://cdnjs.cloudflare.com", 
+                "https://js.stripe.com"
+            ],
+            styleSrc: [
+                "'self'", 
+                "'unsafe-inline'", 
+                "https://api.mapbox.com", 
+                "https://unpkg.com", 
+                "https://fonts.googleapis.com", 
+                "https://cdn.jsdelivr.net", 
+                "https://cdnjs.cloudflare.com", 
+                "https://kit.fontawesome.com"
+            ],
+            imgSrc: [
+                "'self'", 
+                "data:", 
+                "blob:", 
+                "https://res.cloudinary.com", 
+                "https://images.unsplash.com", 
+                "https://*.mapbox.com", 
+                "https://*.stripe.com",
+                "https://*.tile.openstreetmap.org",
+                "https://tile.openstreetmap.org"
+            ],
+            connectSrc: [
+                "'self'", 
+                "https://api.mapbox.com", 
+                "https://events.mapbox.com", 
+                "https://*.tiles.mapbox.com", 
+                "https://api.stripe.com", 
+                "https://checkout.stripe.com", 
+                "https://*.tile.openstreetmap.org", 
+                "https://tile.openstreetmap.org", 
+                "https://a.tile.openstreetmap.org", 
+                "https://b.tile.openstreetmap.org", 
+                "https://c.tile.openstreetmap.org", 
+                "https://ka-f.fontawesome.com"
+            ],
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "https://ka-f.fontawesome.com"],
             frameSrc: ["'self'", "https://js.stripe.com"],
             workerSrc: ["'self'", "blob:"],
@@ -133,7 +173,7 @@ const store = MongoStore.create({
 });
 
 store.on("error", (err) => {
-    console.log("ERROR IN MONGO SESSION STORE", err);
+    console.error("ERROR IN MONGO SESSION STORE:", err);
 });
 
 const sessionOptions = {
@@ -218,7 +258,6 @@ app.get('/favicon.ico', (req, res) => res.redirect('/favicon.svg'));
 app.get(/^\/\.well-known\/.*/, (req, res) => res.status(204).end());
 
 app.all(/(.*)/, (req, res, next) => {
-    console.log("Hit 404 handler for:", req.url);
     next(new ExpressError(404, "Page not Found !"));
 });
 

@@ -1,0 +1,40 @@
+<% if (typeof hostStats !== 'undefined' && userListings.length > 0) { %>
+<!-- Host Analytics Dashboard Banner (Theme Adaptive) -->
+<div class="card border shadow-sm rounded-4 mb-4 host-dashboard-card">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="fw-bold mb-1"><i class="fa-solid fa-chart-line me-2 text-danger"></i>Host Performance Dashboard</h5>
+                <small class="text-muted">Stored Reservation Audit Logs & Analytics</small>
+            </div>
+            <span class="badge rounded-pill bg-danger px-3 py-2 fw-bold">Active Host</span>
+        </div>
+        <div class="row g-3 text-center">
+            <div class="col-6 col-md-3">
+                <div class="p-3 rounded-3 host-metric-box">
+                    <small class="text-muted d-block mb-1 fw-bold">Total Revenue</small>
+                    <span class="fs-5 fw-bold text-success">₹<%= hostStats.totalEarnings.toLocaleString("en-IN") %></span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-3 rounded-3 host-metric-box">
+                    <small class="text-muted d-block mb-1 fw-bold">Active Bookings</small>
+                    <span class="fs-5 fw-bold text-warning"><%= hostStats.activeBookings %></span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-3 rounded-3 host-metric-box">
+                    <small class="text-muted d-block mb-1 fw-bold">Completed Stays</small>
+                    <span class="fs-5 fw-bold text-info"><%= hostStats.completedStays %></span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-3 rounded-3 host-metric-box">
+                    <small class="text-muted d-block mb-1 fw-bold">Cancelled Trips</small>
+                    <span class="fs-5 fw-bold text-danger"><%= hostStats.cancelledBookings %></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<% } %>

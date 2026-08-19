@@ -1,0 +1,90 @@
+<!-- Map Section -->
+<hr class="my-5" />
+<div class="col-12 mb-5">
+  <h4 class="fw-bold mb-4"><i class="fa-solid fa-map-location-dot me-2" style="color: #ff385c;"></i>Where you'll be</h4>
+  <div id="map" class="rounded-4 shadow-sm border" style="height: 400px; width: 100%; z-index: 1; background-color: #eee;"></div>
+  <p class="text-muted mt-3 fw-bold"><i class="fa-solid fa-location-crosshairs me-2"></i><%= listing.location %>, <%= listing.country %></p>
+</div>
+
+<!-- Mapbox & Leaflet Assets -->
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Safely embed listing data as JSON script block -->
+<script type="application/json" id="listing-json-data"><%- JSON.stringify(listing).replace(/</g, '\\u003c').replace(/>/g, '\\u003e') %></script>
+
+<script>
+(function initUniversalMap() {
+    const mapContainer = document.getElementById('map');
+    const mapToken = "<%= mapToken %>";
+    let listingData = {};
+    try {
+        const listingDataEl = document.getElementById('listing-json-data');
+        if (listingDataEl) {
+            listingData = JSON.parse(listingDataEl.textContent);
+        }
+    } catch (e) {
+        console.error("Failed to parse listing data:", e);
+    }
+    
+    let coords = [78.4867, 17.3850]; // Fallback coordinates
+    if (listingData.geometry && listingData.geometry.coordinates && listingData.geometry.coordinates.length === 2) {
+        coords = listingData.geometry.coordinates;
+    }
+
+    const latLon = [coords[1], coords[0]];
+
+    // Safely construct popup DOM element
+    const popupDiv = document.createElement('div');
+    const h6 = document.createElement('h6');
+    h6.className = 'mb-0 fw-bold';
+    h6.textContent = listingData.title || '';
+    popupDiv.appendChild(h6);
+
+    // Attempt Mapbox first
+    try {
+        if (!mapToken) {
+            loadLeafletFallback();
+            return;
+        }
+
+        mapboxgl.accessToken = mapToken;
+        const mapbox = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v12',
+            center: coords,
+            zoom: 10
+        });
+
+        mapbox.on('error', () => {
+            console.warn("Mapbox failed to load tiles, switching to Leaflet fallback...");
+            loadLeafletFallback();
+        });
+
+        new mapboxgl.Marker({ color: "#ff385c" })
+            .setLngLat(coords)
+            .setPopup(new mapboxgl.Popup({ offset: 25 }).setDOMContent(popupDiv))
+            .addTo(mapbox);
+
+    } catch (e) {
+        console.error("Mapbox init failed, using Leaflet:", e);
+        loadLeafletFallback();
+    }
+
+    function loadLeafletFallback() {
+        if (!mapContainer) return;
+        mapContainer.replaceChildren(); // Clear any partial Mapbox elements
+        const map = L.map('map').setView(latLon, 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+        L.marker(latLon).addTo(map)
+            .bindPopup(popupDiv)
+            .openPopup();
+        
+        setTimeout(() => { map.invalidateSize(); }, 500);
+    }
+})();
+</script>

@@ -4,9 +4,9 @@
 [![Express](https://img.shields.io/badge/Express-v5.2-blue.svg)](https://expressjs.com/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-success.svg)](https://www.mongodb.com/)
 [![Stripe](https://img.shields.io/badge/Stripe-Payments-635BFF.svg)](https://stripe.com/)
-[![Security Hardened](https://img.shields.io/badge/Security-Freeze--Ready-brightgreen.svg)]()
+[![Security](https://img.shields.io/badge/Security-Layered--Controls-brightgreen.svg)]()
 
-**WanderLust** is a full-stack hospitality, hotel, and vacation rental platform inspired by Airbnb. Built with Node.js, Express, MongoDB Atlas, and EJS, WanderLust delivers a smooth booking experience, transactional reservation integrity, host analytics, messaging, and security architecture.
+**WanderLust** is a full-stack hospitality, hotel, and vacation rental platform inspired by Airbnb. Built with Node.js, Express, MongoDB Atlas, and EJS, WanderLust delivers a smooth booking experience, transactional reservation integrity, host analytics, messaging, and layered application security controls.
 
 ---
 
@@ -45,7 +45,7 @@
 
 ---
 
-## 🛡️ Security Architecture & Hardening
+## 🛡️ Layered Application Security Controls
 
 | Defense Layer | Implementation Details |
 | :--- | :--- |

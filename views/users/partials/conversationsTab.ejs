@@ -1,0 +1,43 @@
+<!-- Messages Tab -->
+<div class="tab-pane fade" id="messages-tab-pane" role="tabpanel" aria-labelledby="messages-tab" tabindex="0">
+    <% if(typeof conversations === 'undefined' || conversations.length === 0) { %>
+        <div class="text-center mt-5 text-muted">
+            <i class="fa-solid fa-message mb-3" style="font-size: 3rem; color: #ccc;"></i>
+            <h5>No messages yet.</h5>
+            <p>Questions about a stay? Reach out to the host!</p>
+        </div>
+    <% } else { %>
+        <div class="row row-cols-1 g-3">
+            <% for(let convo of conversations) { %>
+                <div class="col">
+                    <a href="/messages?receiverId=<%= convo.otherUser._id %>&listingId=<%= convo.listing ? convo.listing._id : '' %>" class="text-decoration-none text-dark">
+                        <div class="card border-0 shadow-sm rounded-4 p-3" style="background: #fff; transition: 0.3s; border: 1px solid #eee !important;">
+                            <div class="d-flex align-items-center">
+                                <div class="position-relative me-3">
+                                    <% if(convo.otherUser.profileImage && convo.otherUser.profileImage.url) { %>
+                                        <img src="<%= convo.otherUser.profileImage.url %>" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover; border: 2px solid #ff385c;" alt="<%= convo.otherUser.username %>">
+                                    <% } else { %>
+                                        <div class="rounded-circle bg-danger text-white d-flex justify-content-center align-items-center" style="width: 50px; height: 50px; font-weight: bold;">
+                                            <%= convo.otherUser.username ? convo.otherUser.username.charAt(0).toUpperCase() : 'U' %>
+                                        </div>
+                                    <% } %>
+                                </div>
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <h6 class="fw-bold mb-0">@<%= convo.otherUser.username %></h6>
+                                        <small class="text-muted"><%= convo.lastMessage ? new Date(convo.lastMessage.createdAt).toLocaleDateString() : '' %></small>
+                                    </div>
+                                    <p class="mb-1 text-muted small text-truncate"><%= convo.lastMessage ? convo.lastMessage.content : '' %></p>
+                                    <small class="text-danger fw-bold" style="font-size: 0.7rem;"><i class="fa-solid fa-house me-1"></i> <%= convo.listing ? convo.listing.title : 'Stay' %></small>
+                                </div>
+                                <div class="ms-3">
+                                    <i class="fa-solid fa-chevron-right text-muted small"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            <% } %>
+        </div>
+    <% } %>
+</div>

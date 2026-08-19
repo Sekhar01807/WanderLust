@@ -1,0 +1,55 @@
+<!-- Bookings Tab -->
+<div class="tab-pane fade show active" id="bookings-tab-pane" role="tabpanel" aria-labelledby="bookings-tab" tabindex="0">
+    <% if(userBookings.length === 0) { %>
+        <div class="text-center mt-5 text-muted">
+            <i class="fa-solid fa-plane-arrival mb-3" style="font-size: 3rem; color: #ccc;"></i>
+            <h5>No upcoming trips.</h5>
+            <a href="/listings" class="btn btn-outline-danger mt-2">Find a place to stay</a>
+        </div>
+    <% } else { %>
+        <div class="row row-cols-1 g-4">
+            <% for(let booking of userBookings) { %>
+                <div class="col">
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-row">
+                        <img src="<%= booking.listing ? booking.listing.image.url : '' %>" style="width: 200px; height: 150px; object-fit: cover;" alt="<%= booking.listing ? booking.listing.title : 'Trip' %>">
+                        <div class="card-body p-4 d-flex flex-column justify-content-center">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h5 class="fw-bold mb-0"><%= booking.listing ? booking.listing.title : 'Property' %></h5>
+                                <% const isPast = new Date() > new Date(booking.checkOut); %>
+                                <% if (booking.paymentStatus === 'cancelled') { %>
+                                    <span class="badge bg-danger py-2 px-3"><i class="fa-solid fa-ban me-1"></i>Cancelled</span>
+                                <% } else if (booking.paymentStatus === 'no_show') { %>
+                                    <span class="badge bg-warning text-dark py-2 px-3"><i class="fa-solid fa-user-slash me-1"></i>No-Show</span>
+                                <% } else if (isPast || booking.paymentStatus === 'completed') { %>
+                                    <span class="badge bg-primary py-2 px-3"><i class="fa-solid fa-circle-check me-1"></i>Completed Stay</span>
+                                <% } else { %>
+                                    <span class="badge bg-success py-2 px-3"><i class="fa-solid fa-plane-departure me-1"></i>Confirmed Stay</span>
+                                <% } %>
+                            </div>
+                            <p class="text-muted mb-1 small"><i class="fa-solid fa-calendar-days me-2 text-danger"></i><strong>Dates:</strong> <%= new Date(booking.checkIn).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) %> &rarr; <%= new Date(booking.checkOut).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) %></p>
+                            <p class="text-muted mb-0 small"><i class="fa-solid fa-users me-2 text-primary"></i><strong>Guests:</strong> <%= booking.guests %> Guests</p>
+                            <div class="mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <a href="/listings/<%= booking.listing ? booking.listing._id : '' %>" class="btn btn-sm btn-dark rounded-pill px-3 me-2">View Stay</a>
+                                    <% if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'completed' || isPast) { %>
+                                        <a href="/receipt/<%= booking._id %>" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                                            <i class="fa-solid fa-file-pdf text-danger me-1"></i>Download PDF Receipt
+                                        </a>
+                                    <% } %>
+                                </div>
+                                <% if (booking.paymentStatus !== 'cancelled' && !isPast) { %>
+                                    <form method="POST" action="/listings/<%= booking.listing ? booking.listing._id : '' %>/booking/<%= booking._id %>?_method=DELETE" class="d-inline">
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Are you sure you want to cancel this reservation?')">
+                                            <i class="fa-solid fa-xmark me-1"></i>Cancel Trip
+                                        </button>
+                                    </form>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <% } %>
+        </div>
+    <% } %>
+</div>

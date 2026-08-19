@@ -1,0 +1,204 @@
+<!-- Chat Modal -->
+<div class="modal fade" id="chatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-bottom p-4">
+                <div class="d-flex align-items-center">
+                    <% if(listing.owner && listing.owner.profileImage && listing.owner.profileImage.url) { %>
+                        <img src="<%= listing.owner.profileImage.url %>" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover;" alt="<%= listing.owner.username %>">
+                    <% } else if(listing.owner) { %>
+                        <div class="rounded-circle bg-danger text-white d-flex justify-content-center align-items-center me-3" style="width: 45px; height: 45px; font-weight: bold;">
+                            <%= listing.owner.username ? listing.owner.username.charAt(0).toUpperCase() : 'H' %>
+                        </div>
+                    <% } %>
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0">Chat with <%= listing.owner ? listing.owner.username : 'Host' %></h6>
+                        <div id="userStatusContainer">
+                            <small class="text-success fw-bold" id="onlineStatus">
+                                <i class="fa-solid fa-circle" style="font-size: 0.5rem;"></i> Online
+                            </small>
+                            <small class="text-muted d-none" id="lastSeenStatus">
+                                Last seen <%= new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) %>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 bg-light" style="height: 400px; overflow-y: auto;" id="chatMessages">
+                <div class="p-4 text-center text-muted small">
+                    <i class="fa-solid fa-lock me-1"></i> Messages are secure and private.
+                </div>
+            </div>
+            <div class="modal-footer p-3 border-top bg-white">
+                <% if (currUser && listing.owner && listing.owner._id && listing.owner._id.equals(currUser._id)) { %>
+                    <div class="w-100 text-center py-2">
+                        <span class="badge rounded-pill bg-light text-muted p-2">You are the host of this listing</span>
+                    </div>
+                <% } else { %>
+                    <form id="chatForm" class="w-100 d-flex gap-2">
+                        <input type="text" id="chatInput" class="form-control rounded-pill border-0 bg-light px-4 py-2" placeholder="Type your message..." required>
+                        <button type="submit" class="btn btn-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;" aria-label="Send message">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </form>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Host Direct Chat Controller
+(() => {
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatModal = document.getElementById('chatModal');
+    
+    if (!chatForm || !chatMessages || !chatModal) return;
+
+    const receiverId = "<%= (listing && listing.owner) ? (listing.owner._id || listing.owner) : '' %>";
+    const listingId = "<%= listing ? listing._id : '' %>";
+    const currUserId = "<%= currUser ? currUser._id : '' %>";
+    
+    if (!receiverId) {
+        const unavailDiv = document.createElement('div');
+        unavailDiv.className = 'p-4 text-center text-muted';
+        unavailDiv.textContent = 'Chat is unavailable for this listing.';
+        chatMessages.replaceChildren(unavailDiv);
+        chatForm.style.display = 'none';
+        return;
+    }
+
+    async function loadMessages() {
+        try {
+            const res = await fetch(`/messages/${receiverId}?listingId=${listingId}`);
+            const messages = await res.json();
+            
+            chatMessages.replaceChildren();
+            const secureNotice = document.createElement('div');
+            secureNotice.className = 'p-4 text-center text-muted small';
+            const lockIcon = document.createElement('i');
+            lockIcon.className = 'fa-solid fa-lock me-1';
+            secureNotice.appendChild(lockIcon);
+            secureNotice.appendChild(document.createTextNode(' Messages are secure and private.'));
+            chatMessages.appendChild(secureNotice);
+            
+            messages.forEach(msg => {
+                const isMe = msg.sender._id === currUserId;
+                const div = document.createElement('div');
+                div.className = `d-flex ${isMe ? 'justify-content-end' : 'justify-content-start'} mb-3 px-4`;
+
+                const bubble = document.createElement('div');
+                bubble.className = 'p-3 rounded-4 shadow-sm';
+                bubble.style.maxWidth = '80%';
+                bubble.style.background = isMe ? 'linear-gradient(135deg, #ff385c, #e03150)' : '#fff';
+                bubble.style.color = isMe ? '#fff' : '#222';
+
+                const p = document.createElement('p');
+                p.className = 'mb-0 msg-text';
+                p.textContent = msg.content || '';
+
+                const small = document.createElement('small');
+                small.className = 'opacity-50 mt-1 d-block';
+                small.style.fontSize = '0.7rem';
+                small.textContent = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+
+                bubble.appendChild(p);
+                bubble.appendChild(small);
+                div.appendChild(bubble);
+                chatMessages.appendChild(div);
+            });
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (err) {
+            console.error('Failed to load messages:', err);
+        }
+    }
+
+    function getSmartDate(date) {
+        const now = new Date();
+        const diff = now - date;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        
+        if (days === 0) return `today at ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        if (days === 1) return `yesterday at ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        if (days < 7) return `${date.toLocaleDateString([], {weekday: 'long'})} at ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        return date.toLocaleDateString([], {day: 'numeric', month: 'short', year: 'numeric'});
+    }
+
+    chatModal.addEventListener('shown.bs.modal', () => {
+        loadMessages();
+        
+        const online = document.getElementById('onlineStatus');
+        const lastSeen = document.getElementById('lastSeenStatus');
+        
+        const randomPast = new Date();
+        randomPast.setMinutes(randomPast.getMinutes() - Math.floor(Math.random() * 120));
+        if (lastSeen) lastSeen.textContent = `Last seen ${getSmartDate(randomPast)}`;
+
+        setTimeout(() => {
+            if (online && lastSeen) {
+                online.classList.remove('d-none');
+                lastSeen.classList.add('d-none');
+            }
+        }, 800);
+    });
+
+    chatModal.addEventListener('hidden.bs.modal', () => {
+        const online = document.getElementById('onlineStatus');
+        const lastSeen = document.getElementById('lastSeenStatus');
+        if (online && lastSeen) {
+            online.classList.add('d-none');
+            lastSeen.classList.remove('d-none');
+        }
+    });
+
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const content = chatInput.value.trim();
+        if (!content) return;
+
+        const submitBtn = chatForm.querySelector('button');
+        submitBtn.disabled = true;
+        submitBtn.replaceChildren();
+        const spinner = document.createElement('span');
+        spinner.className = 'spinner-border spinner-border-sm';
+        submitBtn.appendChild(spinner);
+
+        try {
+            const res = await fetch('/messages', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                },
+                body: JSON.stringify({ receiverId, listingId, content })
+            });
+
+            if (res.ok) {
+                chatInput.value = '';
+                await loadMessages();
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                alert(`Server Error: ${res.status} - ${errData.message || 'Unknown'}`);
+            }
+        } catch (err) {
+            console.error('Message Send Error:', err);
+            alert(`Connection Error: ${err.message}.`);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.replaceChildren();
+            const sendIcon = document.createElement('i');
+            sendIcon.className = 'fa-solid fa-paper-plane';
+            submitBtn.appendChild(sendIcon);
+        }
+    });
+
+    setInterval(() => {
+        if (chatModal.classList.contains('show')) {
+            loadMessages();
+        }
+    }, 3000);
+})();
+</script>

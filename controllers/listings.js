@@ -97,7 +97,6 @@ module.exports.createListing = async (req, res, next) => {
     const User = require("../models/user");
     await User.findByIdAndUpdate(newUser, { role: "Host" });
 
-    console.log(savedListing);
     req.flash("success", "New Listing Created! You are now an active Host 🏠");
     res.redirect("/listings");
 };
@@ -148,8 +147,7 @@ module.exports.updateListing = async (req, res) => {
 
 module.exports.deleteListing = async (req, res) => {
     let { id } = req.params;
-    let deletedListing = await Listing.findByIdAndDelete(id);
-    console.log(deletedListing);
+    await Listing.findByIdAndDelete(id);
     req.flash("success", "Listing Deleted!");
     res.redirect("/listings");
 };

@@ -1,0 +1,31 @@
+<!-- Wishlist Tab -->
+<div class="tab-pane fade" id="wishlist-tab-pane" role="tabpanel" aria-labelledby="wishlist-tab" tabindex="0">
+    <% if(user.wishlist.length === 0) { %>
+        <div class="text-center mt-5 text-muted">
+            <i class="fa-solid fa-heart mb-3" style="font-size: 3rem; color: #ccc;"></i>
+            <h5>Your wishlist is empty.</h5>
+            <a href="/listings" class="btn btn-outline-danger mt-2">Explore Listings</a>
+        </div>
+    <% } else { %>
+        <div class="row row-cols-lg-2 row-cols-md-2 row-cols-sm-1">
+            <% for(let listing of user.wishlist) { %>
+                <div class="card listing-card mb-4" style="border: 1px solid #ddd !important; border-radius: 1rem; overflow: hidden; position: relative;">
+                    <a href="/listings/<%= listing._id %>" class="listing-link">
+                        <img src="<%= listing.image ? listing.image.url : '' %>" class="card-img-top" alt="<%= listing.title %>" style="height: 15rem; object-fit: cover;">
+                    </a>
+                    <form method="POST" action="/wishlist/<%= listing._id %>" class="wishlist-btn-form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button type="submit" class="wishlist-btn" title="Remove from Wishlist">
+                            <i class="fa-solid fa-heart" style="color:crimson;"></i>
+                        </button>
+                    </form>
+                    <div class="card-body p-3">
+                        <h5 class="card-title text-truncate"><%= listing.title %></h5>
+                        <p class="card-text text-muted mb-2"><i class="fa-solid fa-location-dot"></i> <%= listing.location %></p>
+                        <span class="fw-bold">&#8377; <%= listing.price ? listing.price.toLocaleString("en-IN") : "N/A" %></span>
+                    </div>
+                </div>
+            <% } %>
+        </div>
+    <% } %>
+</div>

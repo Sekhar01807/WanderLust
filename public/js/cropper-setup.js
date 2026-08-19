@@ -61,7 +61,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (editSection && editSection.style.display === 'none') {
                         editSection.style.display = 'block';
                         if (toggleBtn) {
-                            toggleBtn.innerHTML = '<i class="fa-solid fa-xmark me-2"></i>Close Edit';
+                            toggleBtn.replaceChildren();
+                            const icon = document.createElement('i');
+                            icon.className = 'fa-solid fa-xmark me-2';
+                            toggleBtn.appendChild(icon);
+                            toggleBtn.appendChild(document.createTextNode('Close Edit'));
                             toggleBtn.classList.replace('btn-outline-danger', 'btn-secondary');
                         }
                     }

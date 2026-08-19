@@ -78,11 +78,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const convos = await res.json();
             
             if (!convos || convos.length === 0) {
-                convoList.innerHTML = '<div class="p-4 text-center text-muted">No messages yet.</div>';
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'p-4 text-center text-muted';
+                emptyDiv.textContent = 'No messages yet.';
+                convoList.replaceChildren(emptyDiv);
                 return;
             }
 
-            convoList.innerHTML = '';
+            convoList.replaceChildren();
             convos.forEach(convo => {
                 // Determine who the other person is
                 const otherUser = convo.sender._id === currUserId ? convo.receiver : convo.sender;
@@ -93,29 +96,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.className = 'list-group-item list-group-item-action border-0 p-3 mb-2 rounded-4 d-flex align-items-center shadow-sm';
                 
                 const initial = otherUser.username ? otherUser.username.charAt(0).toUpperCase() : '?';
-                const profileHtml = otherUser.profileImage?.url 
-                    ? `<img src="${otherUser.profileImage.url}" class="rounded-circle me-3" style="width: 45px; height: 45px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">`
-                    : `<div class="rounded-circle bg-danger text-white d-flex justify-content-center align-items-center me-3" style="width: 45px; height: 45px; font-weight: bold; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">${initial}</div>`;
+                
+                if (otherUser.profileImage?.url) {
+                    const avatarImg = document.createElement('img');
+                    avatarImg.src = otherUser.profileImage.url;
+                    avatarImg.className = 'rounded-circle me-3';
+                    avatarImg.style.cssText = 'width: 45px; height: 45px; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);';
+                    avatarImg.alt = otherUser.username || 'User';
+                    item.appendChild(avatarImg);
+                } else {
+                    const avatarDiv = document.createElement('div');
+                    avatarDiv.className = 'rounded-circle bg-danger text-white d-flex justify-content-center align-items-center me-3';
+                    avatarDiv.style.cssText = 'width: 45px; height: 45px; font-weight: bold; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);';
+                    avatarDiv.textContent = initial;
+                    item.appendChild(avatarDiv);
+                }
 
-                item.innerHTML = `
-                    ${profileHtml}
-                    <div class="flex-grow-1 overflow-hidden">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold mb-0 text-truncate convo-user" style="max-width: 120px;"></h6>
-                            <small class="text-muted" style="font-size: 0.7rem;">${new Date(convo.createdAt).toLocaleDateString()}</small>
-                        </div>
-                        <p class="mb-0 text-muted small text-truncate convo-listing"></p>
-                    </div>
-                `;
-                item.querySelector('.convo-user').textContent = otherUser.username || 'User';
-                item.querySelector('.convo-listing').textContent = convo.listing?.title || 'WanderLust Trip';
+                const detailsDiv = document.createElement('div');
+                detailsDiv.className = 'flex-grow-1 overflow-hidden';
+
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'd-flex justify-content-between align-items-center';
+
+                const userH6 = document.createElement('h6');
+                userH6.className = 'fw-bold mb-0 text-truncate convo-user';
+                userH6.style.maxWidth = '120px';
+                userH6.textContent = otherUser.username || 'User';
+
+                const dateSmall = document.createElement('small');
+                dateSmall.className = 'text-muted';
+                dateSmall.style.fontSize = '0.7rem';
+                dateSmall.textContent = convo.createdAt ? new Date(convo.createdAt).toLocaleDateString() : '';
+
+                headerDiv.appendChild(userH6);
+                headerDiv.appendChild(dateSmall);
+
+                const listingP = document.createElement('p');
+                listingP.className = 'mb-0 text-muted small text-truncate convo-listing';
+                listingP.textContent = convo.listing?.title || 'WanderLust Trip';
+
+                detailsDiv.appendChild(headerDiv);
+                detailsDiv.appendChild(listingP);
+                item.appendChild(detailsDiv);
                 
                 item.onclick = () => selectConversation(otherUser, convo.listing?._id);
                 convoList.appendChild(item);
             });
         } catch (err) {
-            console.error(err);
-            convoList.innerHTML = '<div class="p-4 text-center text-danger">Error loading inbox.</div>';
+            console.error('Failed to load conversations:', err);
+            const errDiv = document.createElement('div');
+            errDiv.className = 'p-4 text-center text-danger';
+            errDiv.textContent = 'Error loading inbox.';
+            convoList.replaceChildren(errDiv);
         }
     }
 
@@ -124,9 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentListingId = listingId;
 
         // Update Header
-        document.getElementById('activeUserName').innerText = user.username;
+        document.getElementById('activeUserName').textContent = user.username || 'User';
         const initial = document.getElementById('activeUserInitial');
-        initial.innerText = user.username ? user.username.charAt(0).toUpperCase() : '?';
+        initial.textContent = user.username ? user.username.charAt(0).toUpperCase() : '?';
 
         chatPlaceholder.classList.add('d-none');
         activeChatWindow.classList.remove('d-none');
@@ -140,23 +172,36 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`/messages/${currentReceiverId}?listingId=${currentListingId}`);
             const messages = await res.json();
             
-            messagesDisplay.innerHTML = '';
+            messagesDisplay.replaceChildren();
             messages.forEach(msg => {
                 const isMe = msg.sender._id === currUserId;
                 const div = document.createElement('div');
                 div.className = `d-flex ${isMe ? 'justify-content-end' : 'justify-content-start'} mb-3`;
-                div.innerHTML = `
-                    <div class="p-3 rounded-4 shadow-sm" style="max-width: 80%; background: ${isMe ? 'linear-gradient(135deg, #ff385c, #e03150)' : '#fff'}; color: ${isMe ? '#fff' : '#222'}; border: ${isMe ? 'none' : '1px solid #eee'};">
-                        <p class="mb-0 msg-text"></p>
-                        <small class="opacity-50 mt-1 d-block text-end" style="font-size: 0.65rem;">${new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</small>
-                    </div>
-                `;
-                div.querySelector('.msg-text').textContent = msg.content || '';
+                
+                const bubble = document.createElement('div');
+                bubble.className = 'p-3 rounded-4 shadow-sm';
+                bubble.style.maxWidth = '80%';
+                bubble.style.background = isMe ? 'linear-gradient(135deg, #ff385c, #e03150)' : '#fff';
+                bubble.style.color = isMe ? '#fff' : '#222';
+                bubble.style.border = isMe ? 'none' : '1px solid #eee';
+
+                const p = document.createElement('p');
+                p.className = 'mb-0 msg-text';
+                p.textContent = msg.content || '';
+
+                const small = document.createElement('small');
+                small.className = 'opacity-50 mt-1 d-block text-end';
+                small.style.fontSize = '0.65rem';
+                small.textContent = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+
+                bubble.appendChild(p);
+                bubble.appendChild(small);
+                div.appendChild(bubble);
                 messagesDisplay.appendChild(div);
             });
             messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
         } catch (err) {
-            console.error(err);
+            console.error('Failed to load messages:', err);
         }
     }
 

@@ -1,0 +1,247 @@
+<% if (currUser && (typeof hasVerifiedStay !== 'undefined' && hasVerifiedStay) && listing.owner && !listing.owner._id.equals(currUser._id)) { %>
+  <hr class="mb-5 border-secondary-subtle" />
+  
+  <!-- Modern Review Creation Card -->
+  <div class="card border-0 shadow-lg rounded-4 mb-5 overflow-hidden" style="background: var(--bs-card-bg); border: 1px solid rgba(0,0,0,0.08);">
+      <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center">
+              <div class="rounded-circle d-flex justify-content-center align-items-center me-3 shadow-sm" style="width: 48px; height: 48px; background: linear-gradient(135deg, #ff385c, #e03150); color: white;">
+                  <i class="fa-solid fa-pen-nib fs-5"></i>
+              </div>
+              <div>
+                  <h4 class="mb-0 fw-bold">Leave a Review</h4>
+                  <p class="text-muted small mb-0">Share your experience to help fellow travelers</p>
+              </div>
+          </div>
+          <span class="badge rounded-pill bg-danger-subtle text-danger px-3 py-2 fw-bold d-none d-sm-inline-block">
+              <i class="fa-solid fa-shield-halved me-1"></i>Verified Stay
+          </span>
+      </div>
+
+      <div class="card-body p-4 pt-3">
+          <form action="/listings/<%= listing._id %>/reviews" method="POST" class="needs-validation" novalidate enctype="multipart/form-data">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            
+            <!-- Interactive Star Rating Picker -->
+            <div class="mb-4 p-3 rounded-4 bg-light border">
+              <label class="form-label fw-bold mb-2 d-block"><i class="fa-solid fa-star me-2 text-warning"></i>Your Overall Rating</label>
+              <div class="d-flex align-items-center flex-wrap gap-3">
+                  <div class="stars-picker d-flex gap-2" id="starPicker">
+                      <i class="fa-solid fa-star star-picker-icon active" data-value="1"></i>
+                      <i class="fa-solid fa-star star-picker-icon active" data-value="2"></i>
+                      <i class="fa-solid fa-star star-picker-icon active" data-value="3"></i>
+                      <i class="fa-solid fa-star star-picker-icon active" data-value="4"></i>
+                      <i class="fa-solid fa-star star-picker-icon active" data-value="5"></i>
+                  </div>
+                  <input type="hidden" name="review[rating]" id="selectedRatingInput" value="5" required>
+                  <span id="ratingLabelText" class="badge rounded-pill bg-warning text-dark fw-bold px-3 py-2 fs-6">5.0 — Exceptional!</span>
+              </div>
+            </div>
+
+            <!-- Review Comment Input -->
+            <div class="mb-4">
+              <label for="comment" class="form-label fw-bold mb-2"><i class="fa-regular fa-comment-dots me-2 text-danger"></i>Write Your Feedback</label>
+              <textarea name="review[comment]" id="comment" rows="4" class="form-control rounded-4 p-3 border" style="resize: none; font-size: 0.95rem; transition: all 0.2s ease;" placeholder="What made your stay special? Describe the hospitality, cleanliness, or amenities..." required></textarea>
+              <div class="invalid-feedback">
+                Please enter a brief review before submitting.
+              </div>
+            </div>
+
+            <!-- Review Image Upload -->
+            <div class="mb-4">
+              <label for="reviewImage" class="form-label fw-bold mb-2"><i class="fa-solid fa-camera me-2 text-danger"></i>Attach Photo (Optional)</label>
+              <input type="file" name="reviewImage" id="reviewImage" class="form-control rounded-pill px-4 py-2 border">
+              <small class="text-muted mt-1 d-block"><i class="fa-solid fa-lightbulb me-1 text-warning"></i>Adding real photos builds trust and helps other guests!</small>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-danger py-3 px-5 fw-bold rounded-pill w-100 shadow-sm" style="background: linear-gradient(135deg, #ff385c, #e03150); border: none; font-size: 1.05rem; transition: transform 0.2s ease;">
+              <i class="fa-solid fa-paper-plane me-2"></i>Publish Review
+            </button>
+          </form>
+      </div>
+  </div>
+<% } %>
+
+<% if (listing.reviews && listing.reviews.length > 0) { %>
+  <hr class="mb-5 border-secondary-subtle" />
+  
+  <div class="d-flex align-items-center justify-content-between mb-4">
+      <div class="d-flex align-items-center">
+          <div class="rounded-circle bg-warning-subtle text-warning d-flex justify-content-center align-items-center me-3" style="width: 44px; height: 44px;">
+              <i class="fa-solid fa-star fs-5 text-warning"></i>
+          </div>
+          <div>
+              <h4 class="mb-0 fw-bold"><%= listing.reviews.length %> Guest Review<%= listing.reviews.length > 1 ? 's' : '' %></h4>
+              <p class="text-muted small mb-0">Verified feedback from recent travelers</p>
+          </div>
+      </div>
+  </div>
+
+  <div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
+    <% for (let review of listing.reviews) { %>
+      <div class="col">
+        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 border" style="background: var(--bs-card-bg);">
+          <!-- Header: Avatar + Name + Date -->
+          <div class="d-flex align-items-center justify-content-between mb-3">
+              <div class="d-flex align-items-center">
+                  <% if(review.author && review.author.profileImage && review.author.profileImage.url && !review.author.profileImage.url.includes("dwy7q5x2g") && review.author.profileImage.url !== "") { %>
+                      <img src="<%= review.author.profileImage.url %>" class="rounded-circle me-3 border" style="width: 46px; height: 46px; object-fit: cover;" alt="<%= review.author.username %>">
+                  <% } else { %>
+                      <div class="rounded-circle me-3 d-flex justify-content-center align-items-center text-white fw-bold shadow-sm" style="width: 46px; height: 46px; background: linear-gradient(135deg, #222, #444); font-size: 1.1rem;">
+                          <%= review.author ? review.author.username.charAt(0).toUpperCase() : "A" %>
+                      </div>
+                  <% } %>
+                  <div>
+                      <h6 class="fw-bold mb-0"><%= review.author ? review.author.username : "Verified Guest" %></h6>
+                      <span class="text-muted small"><%= review.createdAt ? new Date(review.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Recent stay' %></span>
+                  </div>
+              </div>
+
+              <!-- Star Rating Display -->
+              <div class="d-flex align-items-center gap-1 bg-warning-subtle px-3 py-1 rounded-pill">
+                  <i class="fa-solid fa-star text-warning" style="font-size: 0.85rem;"></i>
+                  <span class="fw-bold text-dark" style="font-size: 0.85rem;"><%= review.rating %>.0</span>
+              </div>
+          </div>
+
+          <!-- Comment Text -->
+          <div class="review-text-container mb-3 flex-grow-1">
+              <p class="review-text-short mb-1 text-secondary" style="line-height: 1.6; font-size: 0.95rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;"><%= review.comment %></p>
+              <p class="review-text-full mb-1 text-secondary" style="line-height: 1.6; font-size: 0.95rem; display: none;"><%= review.comment %></p>
+              <% if (review.comment && review.comment.length > 120) { %>
+                  <a href="javascript:void(0)" class="show-more-link fw-bold text-danger text-decoration-none" style="font-size: 0.85rem;" onclick="toggleReview(this)">Read full review <i class="fa-solid fa-chevron-down ms-1" style="font-size: 0.75rem;"></i></a>
+              <% } %>
+          </div>
+
+          <!-- Photo Thumbnail -->
+          <% if (review.image && review.image.url) { %>
+              <div class="review-image-container mb-3 overflow-hidden rounded-3 border shadow-sm" style="height: 140px;">
+                  <img src="<%= review.image.url %>" class="w-100 h-100 object-fit-cover" style="cursor: pointer;" onclick="window.open('<%= review.image.url %>', '_blank')" title="Click to expand photo" alt="Review photo">
+              </div>
+          <% } %>
+
+          <!-- Author Actions -->
+          <% if (currUser && review.author && review.author._id.equals(currUser._id)) { %>
+              <div class="border-top pt-2 mt-auto text-end">
+                  <form method="POST" action="/listings/<%= listing._id %>/reviews/<%= review._id %>?_method=DELETE" class="d-inline delete-review-form">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="button" class="btn btn-sm btn-link text-danger fw-bold p-0 text-decoration-none delete-review-btn" style="font-size: 0.82rem;">
+                        <i class="fa-solid fa-trash-can me-1"></i>Delete Review
+                    </button>
+                  </form>
+              </div>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+<% } %>
+
+<script>
+// Safe Review Toggle with DOM APIs
+window.toggleReview = function(link) {
+    const container = link.closest('.review-text-container');
+    if (!container) return;
+    const short = container.querySelector('.review-text-short');
+    const full = container.querySelector('.review-text-full');
+    
+    link.replaceChildren();
+    if (short.style.display !== 'none') {
+        short.style.display = 'none';
+        full.style.display = 'block';
+        link.appendChild(document.createTextNode('Show less '));
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-chevron-up ms-1';
+        icon.style.fontSize = '0.75rem';
+        link.appendChild(icon);
+    } else {
+        short.style.display = '-webkit-box';
+        full.style.display = 'none';
+        link.appendChild(document.createTextNode('Read full review '));
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-chevron-down ms-1';
+        icon.style.fontSize = '0.75rem';
+        link.appendChild(icon);
+    }
+};
+
+// Interactive Star Rating Picker Engine
+document.addEventListener('DOMContentLoaded', () => {
+    const starPicker = document.getElementById('starPicker');
+    const selectedInput = document.getElementById('selectedRatingInput');
+    const ratingLabelText = document.getElementById('ratingLabelText');
+
+    if (starPicker && selectedInput && ratingLabelText) {
+        const stars = starPicker.querySelectorAll('.star-picker-icon');
+        const labels = {
+            1: '1.0 — Poor',
+            2: '2.0 — Below Average',
+            3: '3.0 — Average Stay',
+            4: '4.0 — Very Good!',
+            5: '5.0 — Exceptional!'
+        };
+
+        function updateStars(val) {
+            stars.forEach(star => {
+                const sVal = parseInt(star.dataset.value);
+                if (sVal <= val) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+            selectedInput.value = val;
+            ratingLabelText.textContent = labels[val] || `${val}.0`;
+        }
+
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                const val = parseInt(star.dataset.value);
+                updateStars(val);
+            });
+
+            star.addEventListener('mouseenter', () => {
+                const val = parseInt(star.dataset.value);
+                stars.forEach(s => {
+                    if (parseInt(s.dataset.value) <= val) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
+                });
+            });
+        });
+
+        starPicker.addEventListener('mouseleave', () => {
+            updateStars(parseInt(selectedInput.value || 5));
+        });
+    }
+
+    // Delete Review Confirmation
+    document.querySelectorAll('.delete-review-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const result = await Swal.fire({
+                title: 'Delete your review?',
+                text: "Your feedback will be removed. This cannot be undone.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff385c',
+                cancelButtonColor: '#222',
+                confirmButtonText: 'Yes, delete it',
+                background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#1e1e1e' : '#fff',
+                color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#222',
+                customClass: {
+                    popup: 'rounded-4 border-0 shadow-lg',
+                    confirmButton: 'rounded-pill px-4',
+                    cancelButton: 'rounded-pill px-4'
+                }
+            });
+
+            if (result.isConfirmed) {
+                btn.closest('form').submit();
+            }
+        });
+    });
+});
+</script>
