@@ -136,7 +136,7 @@ async function fulfillBooking(sessionOrId, req = null) {
     const user = await User.findById(targetUserId);
 
     if (booking) {
-        // Atomic update from pending to paid
+        // Update reservation from pending to paid
         booking = await Booking.findOneAndUpdate(
             { _id: booking._id, paymentStatus: { $in: ["pending", "paid"] } },
             {
